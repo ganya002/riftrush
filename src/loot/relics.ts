@@ -1,3 +1,4 @@
+import { activeFor } from './actives';
 import { freezeDeep } from './round';
 import type { Relic, RelicMods } from './types';
 
@@ -19,6 +20,7 @@ function makeRelic(draft: RelicDraft): Relic {
     blurb: draft.blurb,
     mods: draft.mods,
     activeMs: draft.activeMs,
+    active: { ...activeFor(draft.id) },
     statRoll: 1,
   };
   if (draft.drawback !== undefined) relic.drawback = draft.drawback;

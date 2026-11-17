@@ -17,8 +17,10 @@ export interface HudState {
   maxHp: number;
   weaponName: string;
   ammoLabel: string;
+  secondaryLabel: string;
   dashReady: boolean;
   floor: number;
+  gold: number;
   shards: number;
   minimapRooms: HudRoom[];
 }
@@ -68,10 +70,12 @@ export function mountHud(scene: Phaser.Scene, read: () => HudState): Phaser.Game
   const scale = hudScale(scene);
   const weapon = pxText(scene, 0, 0, 'NONE', scale, PALETTE.bone);
   const ammo = pxText(scene, 0, 0, '', scale, PALETTE.common);
+  const secondary = pxText(scene, 0, 0, '', scale, PALETTE.violet);
   const dash = pxText(scene, 0, 0, 'DASH', scale, PALETTE.common);
   const floor = pxText(scene, 0, 0, 'FL 0', scale, PALETTE.bone);
-  const shards = pxText(scene, 0, 0, '0', scale, PALETTE.gold);
-  root.add([plate, weapon, ammo, dash, floor, shards, map]);
+  const gold = pxText(scene, 0, 0, 'G 0', scale, PALETTE.gold);
+  const shards = pxText(scene, 0, 0, '0', scale, PALETTE.rare);
+  root.add([plate, weapon, ammo, secondary, dash, floor, gold, shards, map]);
 
   let state = emptyHud();
   const draw = () => {
@@ -80,7 +84,7 @@ export function mountHud(scene: Phaser.Scene, read: () => HudState): Phaser.Game
     } catch {
       // Keep the last readable snapshot if the run throws mid-frame.
     }
-    paintHud(scene, plate, map, { weapon, ammo, dash, floor, shards }, state);
+    paintHud(scene, plate, map, { weapon, ammo, secondary, dash, floor, gold, shards }, state);
   };
 
   scene.events.on('update', draw);
@@ -99,8 +103,10 @@ function paintHud(
   text: {
     weapon: Phaser.GameObjects.BitmapText;
     ammo: Phaser.GameObjects.BitmapText;
+    secondary: Phaser.GameObjects.BitmapText;
     dash: Phaser.GameObjects.BitmapText;
     floor: Phaser.GameObjects.BitmapText;
+    gold: Phaser.GameObjects.BitmapText;
     shards: Phaser.GameObjects.BitmapText;
   },
   state: HudState,
@@ -134,20 +140,26 @@ function paintHud(
   text.weapon.setText(fitText(weaponName));
   text.weapon.setTint(weaponTint(weaponName));
   text.ammo.setText(fitText(state.ammoLabel));
+  text.secondary.setText(fitText(state.secondaryLabel));
+  text.secondary.setTint(PALETTE.violet);
   text.dash.setText('DASH');
   text.dash.setTint(state.dashReady ? PALETTE.mint : PALETTE.common);
+  text.gold.setText(fitText(`G ${Math.max(0, Math.trunc(state.gold))}`));
+  text.gold.setTint(PALETTE.gold);
   text.shards.setText(fitText(String(Math.max(0, Math.trunc(state.shards)))));
-  text.shards.setTint(PALETTE.gold);
+  text.shards.setTint(PALETTE.rare);
 
   const rightWidth = Math.max(
     text.weapon.width,
     text.ammo.width,
+    text.secondary.width,
     text.dash.width,
+    text.gold.width,
     text.shards.width + 8 * scale,
   );
   const line = textHeight(scale);
   const step = line + 2 * scale;
-  const blockH = step * 3 + line + 4 * scale;
+  const blockH = step * 5 + line + 4 * scale;
   const blockX = width - pad - rightWidth;
   drawPlate(
     plate,
@@ -158,16 +170,18 @@ function paintHud(
   );
   const right = width - pad;
   text.shards.setPosition(right - text.shards.width, pad);
-  plate.fillStyle(PALETTE.gold, 1);
+  plate.fillStyle(PALETTE.rare, 1);
   drawMiniDiamond(
     plate,
     right - text.shards.width - 7 * scale,
     pad + Math.round(line / 2) - 2 * scale,
     scale,
   );
-  text.weapon.setPosition(right - text.weapon.width, pad + step);
-  text.ammo.setPosition(right - text.ammo.width, pad + step * 2);
-  text.dash.setPosition(right - text.dash.width, pad + step * 3);
+  text.gold.setPosition(right - text.gold.width, pad + step);
+  text.weapon.setPosition(right - text.weapon.width, pad + step * 2);
+  text.ammo.setPosition(right - text.ammo.width, pad + step * 3);
+  text.secondary.setPosition(right - text.secondary.width, pad + step * 4);
+  text.dash.setPosition(right - text.dash.width, pad + step * 5);
 
   paintMap(map, state.minimapRooms, width - pad, height - pad, scale);
 }
@@ -335,8 +349,10 @@ function emptyHud(): HudState {
     maxHp: 0,
     weaponName: '',
     ammoLabel: '',
+    secondaryLabel: '',
     dashReady: false,
     floor: 0,
+    gold: 0,
     shards: 0,
     minimapRooms: [],
   };
@@ -349,8 +365,10 @@ function coerceHud(value: Partial<HudState> | null | undefined): HudState {
     maxHp: numberOr(value?.maxHp, 0),
     weaponName: typeof value?.weaponName === 'string' ? value.weaponName : '',
     ammoLabel: typeof value?.ammoLabel === 'string' ? value.ammoLabel : '',
+    secondaryLabel: typeof value?.secondaryLabel === 'string' ? value.secondaryLabel : '',
     dashReady: Boolean(value?.dashReady),
     floor: numberOr(value?.floor, 0),
+    gold: numberOr(value?.gold, 0),
     shards: numberOr(value?.shards, 0),
     minimapRooms: rooms,
   };

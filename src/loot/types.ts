@@ -58,6 +58,30 @@ export interface Weapon {
   drawback?: string;
 }
 
+/** Signature cast by Q or the second active slot. Numbers are optional knobs. */
+export interface ActiveEffect {
+  kind:
+    | 'nova'
+    | 'overdrive'
+    | 'dash'
+    | 'cone'
+    | 'bounce'
+    | 'beam'
+    | 'fork'
+    | 'heavy'
+    | 'blast'
+    | 'sacrifice';
+  count?: number;
+  spread?: number;
+  radius?: number;
+  speed?: number;
+  pierce?: number;
+  bounce?: number;
+  seconds?: number;
+  hpCost?: number;
+  power?: number;
+}
+
 export interface RelicMods {
   damageAdd?: number;
   damageMult?: number;
@@ -79,8 +103,10 @@ export interface Relic {
   name: string;
   rarity: Rarity;
   blurb: string;
-  /** Milliseconds before Q can fire this relic's signature again. */
+  /** Milliseconds before this relic's signature can fire again. */
   activeMs: number;
+  /** What the active slot casts. The run switches on `kind`, not on `id`. */
+  active: ActiveEffect;
   mods: RelicMods;
   /** Multiplier rolled inside the rarity band. Catalog entries use 1. */
   statRoll: number;

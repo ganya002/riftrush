@@ -5,6 +5,7 @@ export { bootArt, blitRoom, PALETTE } from '../art';
 export type { AutotileLayer } from '../art';
 export { bootAudio, music, setMuted, setVolume, sfx } from '../audio';
 export type { MusicMode, SfxName } from '../audio';
+export { bossFor } from '../combat/model';
 export { startEncounter } from '../combat';
 export type { CombatHooks } from '../combat';
 export { DataKey } from '../combat/types';
@@ -16,8 +17,8 @@ export {
   rollRoomEvent,
 } from '../events';
 export type { EventId, EventPayload, FloorModifier, RoomEvent } from '../events';
-export { RELICS, applySynergies, rollDrop, startingWeapon } from '../loot';
-export type { Drop, Relic, Weapon, WeaponId } from '../loot';
+export { RELICS, applySynergies, heartsAfterCurse, rollDrop, startingWeapon } from '../loot';
+export type { ActiveEffect, Drop, Relic, Weapon, WeaponId } from '../loot';
 export { CHARACTERS, SAVE_KEY, addShards, getCharacter, getPerk, loadSave } from '../meta';
 export type { CharacterDef, SaveData } from '../meta';
 export {
