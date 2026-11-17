@@ -38,6 +38,7 @@ export interface CombatHooks {
   biome: Biome;
   onCleared: () => void;
   damagePlayer: (amount: number, fromX: number, fromY: number) => void;
+  walls?: Phaser.Physics.Arcade.StaticGroup;
 }
 
 export type FoeKind = EnemyKind | 'boss-a' | 'boss-b';

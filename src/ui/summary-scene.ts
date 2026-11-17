@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import { loadSave } from '../meta';
-import { addPanel, button, pin, placeCentered, stageOfScene, unit } from './draw';
+import { addPanel, button, paintDiamond, pin, placeCentered, stageOfScene, unit } from './draw';
+import { paintBackdrop } from './backdrop';
 import { pxText } from './font';
-import { createRift } from './rift';
 import { PALETTE } from './theme';
 
 /** Data passed in by the run scene. Shards are already banked. */
@@ -22,7 +22,8 @@ export class SummaryScene extends Phaser.Scene {
     killedBy: 'Unknown',
     characterId: 'vesper',
   };
-  private drawRift: (time: number) => void = () => {};
+  private backdrop?: Phaser.GameObjects.Container;
+  private figure?: Phaser.GameObjects.Sprite;
   private layer?: Phaser.GameObjects.Container;
   private dead = false;
   private leaving = false;
@@ -51,8 +52,6 @@ export class SummaryScene extends Phaser.Scene {
     this.leaving = false;
     this.cameras.main.roundPixels = true;
     this.cameras.main.setBackgroundColor(PALETTE.void);
-    this.drawRift = createRift(this, 0.5);
-    this.drawRift(0);
     this.layout();
     this.input.keyboard?.on('keydown-ENTER', this.queueHub);
     this.input.keyboard?.on('keydown-SPACE', this.queueHub);
@@ -60,14 +59,21 @@ export class SummaryScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
   }
 
-  update(time: number): void {
-    this.drawRift(time);
-  }
-
   private layout(): void {
     if (this.dead) return;
     this.layer?.destroy(true);
+    this.backdrop?.destroy(true);
+    this.figure?.destroy();
+    this.backdrop = paintBackdrop(this, 'ash');
     const stage = stageOfScene(this);
+    this.figure = this.add.sprite(
+      stage.x + unit(stage, 64),
+      stage.y + unit(stage, 168),
+      'player',
+      0,
+    );
+    this.figure.setScale(2 * stage.S).setDepth(4);
+    if (this.anims.exists('player-idle')) this.figure.play('player-idle');
     const layer = this.add.container(0, 0);
     layer.setDepth(10);
     this.layer = layer;
@@ -89,26 +95,43 @@ export class SummaryScene extends Phaser.Scene {
     const panel = this.add.graphics();
     addPanel(panel, panelX, panelY, panelW, panelH, PALETTE.rift);
 
-    const rows: readonly (readonly [string, string])[] = [
-      ['FLOOR', String(this.payload.floor)],
-      ['EARNED', signed(this.payload.shardsEarned)],
-      ['BANK', String(loadSave().shards)],
-      ['SEED', String(this.payload.seed)],
-      ['KILLED BY', this.payload.killedBy],
-      ['NEXT', 'GO DEEPER'],
+    const rows: readonly {
+      label: string;
+      value: string;
+      color: number;
+      mark: 'coin' | 'gem' | 'none';
+    }[] = [
+      { label: 'FLOOR', value: String(this.payload.floor), color: PALETTE.bone, mark: 'none' },
+      {
+        label: 'EARNED',
+        value: signed(this.payload.shardsEarned),
+        color: PALETTE.gold,
+        mark: 'gem',
+      },
+      { label: 'BANK', value: String(loadSave().shards), color: PALETTE.rare, mark: 'gem' },
+      { label: 'SEED', value: String(this.payload.seed), color: PALETTE.bone, mark: 'none' },
+      { label: 'KILLED BY', value: this.payload.killedBy, color: PALETTE.rift, mark: 'none' },
+      { label: 'NEXT', value: 'GO DEEPER', color: PALETTE.gold, mark: 'coin' },
     ];
     const rowScale = 2 * stage.S;
-    const texts = rows.map(([label, value], index) => {
-      const line = pxText(
-        this,
-        panelX + unit(stage, 16),
-        panelY + unit(stage, 16) + index * unit(stage, 22),
-        pair(label, value),
-        rowScale,
-        index === rows.length - 1 ? PALETTE.rift : PALETTE.bone,
-      );
-      line.setMaxWidth(panelW - unit(stage, 32));
-      return line;
+    const texts = rows.flatMap((row, index) => {
+      const y = panelY + unit(stage, 14) + index * unit(stage, 22);
+      const label = pxText(this, panelX + unit(stage, 16), y, row.label, rowScale, PALETTE.common);
+      const value = pxText(this, 0, y, row.value, rowScale, row.color);
+      value.setPosition(panelX + panelW - unit(stage, 16) - value.width, y);
+      if (row.mark === 'gem') {
+        paintDiamond(panel, value.x - unit(stage, 10), y + unit(stage, 4), stage.S, row.color);
+      }
+      if (row.mark === 'coin') {
+        panel.fillStyle(PALETTE.gold, 1);
+        panel.fillRect(
+          value.x - unit(stage, 10),
+          y + unit(stage, 3),
+          unit(stage, 6),
+          unit(stage, 8),
+        );
+      }
+      return [label, value];
     });
 
     button(
@@ -169,10 +192,6 @@ export class SummaryScene extends Phaser.Scene {
     this.input.keyboard?.off('keydown-SPACE', this.queueHub);
     this.scale.off('resize', this.layout, this);
   }
-}
-
-function pair(label: string, value: string): string {
-  return `${label.padEnd(10, ' ')}${value}`;
 }
 
 function signed(value: number): string {

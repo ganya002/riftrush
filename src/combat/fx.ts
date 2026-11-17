@@ -172,7 +172,6 @@ export function paintFoe(foe: Foe, now: number): void {
   sprite.setScale(foe.baseScale * wobble);
   sprite.clearTint();
   if (foe.flash > 0) sprite.setTintFill(WHITE);
-  else if (pulse) sprite.setTint(GOLD);
   else if (foe.elite) sprite.setTint(ELITE_TINT[foe.elite]);
 }
 

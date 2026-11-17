@@ -38,31 +38,31 @@ interface BiomeInk {
 const INK: Record<Biome, BiomeInk> = {
   rift: {
     salt: 2,
-    floor0: 31,
-    floor1: 29,
-    floor2: 1,
-    speck: 14,
+    floor0: 3,
+    floor1: 4,
+    floor2: 2,
+    speck: 15,
     shadow: 0,
-    wallTop: 2,
-    wallLit: 3,
-    wallDark: 1,
-    mortar: 0,
+    wallTop: 1,
+    wallLit: 2,
+    wallDark: 0,
+    mortar: 31,
     face: 29,
     faceDeep: 31,
-    lip: 15,
-    edge: 14,
+    lip: 5,
+    edge: 15,
   },
   ash: {
     salt: 8,
-    floor0: 1,
-    floor1: 27,
-    floor2: 0,
+    floor0: 27,
+    floor1: 28,
+    floor2: 1,
     speck: 8,
     shadow: 0,
-    wallTop: 27,
-    wallLit: 28,
+    wallTop: 1,
+    wallLit: 27,
     wallDark: 0,
-    mortar: 1,
+    mortar: 0,
     face: 0,
     faceDeep: 1,
     lip: 8,
@@ -71,12 +71,12 @@ const INK: Record<Biome, BiomeInk> = {
   abyss: {
     salt: 24,
     floor0: 24,
-    floor1: 0,
-    floor2: 31,
-    speck: 25,
-    shadow: 31,
-    wallTop: 24,
-    wallLit: 25,
+    floor1: 25,
+    floor2: 1,
+    speck: 11,
+    shadow: 0,
+    wallTop: 1,
+    wallLit: 24,
     wallDark: 0,
     mortar: 31,
     face: 1,
@@ -95,19 +95,28 @@ function floorTile(biome: Biome, mask: number, variant: number): Frame {
   const e = (mask & 2) !== 0;
   const s = (mask & 4) !== 0;
   const w = (mask & 8) !== 0;
+  const slab = variant % 2 === 0 ? ink.floor0 : ink.floor1;
   for (let y = 0; y < 16; y++) {
     for (let x = 0; x < 16; x++) {
-      const cell = hash(x >> 1, y >> 1, ink.salt + variant * 5);
-      let color = ink.floor0;
-      if (cell % 7 === 0) color = ink.floor1;
-      if (hash(x, y, ink.salt + variant * 13) % 29 === 0) color = ink.speck;
-      if (mask === 0 && variant === 1) {
-        const motif = biome === 'ash' ? 8 : biome === 'abyss' ? 11 : 15;
-        const mark =
-          (x === 8 && y === 8) ||
-          (x === 8 && (y === 6 || y === 10)) ||
-          (y === 8 && (x === 6 || x === 10));
-        if (mark) color = motif;
+      const grout = x === 0 || y === 0 || x === 15 || y === 15;
+      let color = slab;
+      if (grout) color = ink.shadow;
+      else if (x === 1 || y === 1) color = ink.lip;
+      else if (x > 12 && y > 12) color = ink.floor2;
+      if (!grout && variant === 2 && Math.abs(x - 8) + Math.abs(y - 8) <= 3) color = ink.speck;
+      if (!grout && variant === 1 && (x === 5 || y === 11) && hash(x, y, ink.salt) % 2 === 0) {
+        color = ink.floor2;
+      }
+      if (
+        !grout &&
+        variant === 3 &&
+        x > 3 &&
+        x < 12 &&
+        y > 3 &&
+        y < 12 &&
+        (x === y || x + y === 15)
+      ) {
+        color = ink.speck;
       }
       const shadow = (n && y < LIP) || (w && x < LIP) || (s && y > 15 - LIP) || (e && x > 15 - LIP);
       if (shadow) color = ink.shadow;

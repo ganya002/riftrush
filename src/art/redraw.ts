@@ -18,7 +18,7 @@ import {
 
 function flash(frame: Frame, phase: number): Frame {
   if (phase % 2 === 0) return frame;
-  return recolorWhere(frame, (color) => (color < 0 ? -1 : 17));
+  return recolorWhere(frame, (color) => (color === 17 ? 9 : color));
 }
 
 function cycle(draw: (phase: number) => Frame): Frame[] {
@@ -42,20 +42,20 @@ function runner(phase: number, pose: 'idle' | 'run' | 'dash' | 'shoot' | 'hit' |
     pose === 'idle' ? [0, -1, 0, 1][phase]! : pose === 'run' ? (phase % 2 === 0 ? 0 : -1) : 0;
   const leg = pose === 'run' ? (phase % 2 === 0 ? -3 : 3) : pose === 'dash' ? 2 : 0;
   const lean = pose === 'dash' ? phase : 0;
-  fillRect(frame, 11 + lean, 22 + bob, 4, 6, 14);
-  fillRect(frame, 17 + leg + lean, 22 + bob, 4, 6, 6);
-  fillRect(frame, 11 + lean, 27 + bob, 4, 2, 0);
-  fillRect(frame, 17 + leg + lean, 27 + bob, 4, 2, 0);
-  fillRect(frame, 8 + lean, 13 + bob, 14, 11, 6);
-  fillRect(frame, 8 + lean, 21 + bob, 14, 3, 7);
-  fillEllipse(frame, 14 + lean, 11 + bob, 7, 6, 5);
+  fillRect(frame, 8 + lean, 20 + bob, 5, 8, 14);
+  fillRect(frame, 17 + leg + lean, 20 + bob, 5, 8, 6);
+  fillRect(frame, 8 + lean, 27 + bob, 5, 2, 0);
+  fillRect(frame, 17 + leg + lean, 27 + bob, 5, 2, 0);
+  fillRect(frame, 6 + lean, 11 + bob, 16, 12, 6);
+  fillRect(frame, 6 + lean, 20 + bob, 16, 3, 7);
+  fillRect(frame, 4 + lean, 14 + bob, 4, 8, 15);
+  fillEllipse(frame, 14 + lean, 9 + bob, 8, 6, 5);
   const blink = pose === 'idle' && phase === 2;
-  fillRect(frame, 9 + lean, 11 + bob, 11, 3, blink ? 1 : 11);
-  if (!blink) fillRect(frame, 10 + lean, 11 + bob, 9, 1, 17);
-  fillRect(frame, 18 + lean, 16 + bob, 3, 4, 6);
-  const barrel = pose === 'shoot' ? 10 + phase : 8;
-  fillRect(frame, 20 + lean, 17 + bob, barrel, 3, 9);
-  fillRect(frame, 20 + barrel + lean, 16 + bob, 3, 2, pose === 'shoot' ? 17 : 8);
+  fillRect(frame, 8 + lean, 9 + bob, 12, 3, blink ? 1 : 11);
+  if (!blink) fillRect(frame, 9 + lean, 9 + bob, 10, 1, 17);
+  const barrel = pose === 'shoot' ? 12 + phase : 10;
+  fillRect(frame, 20 + lean, 15 + bob, barrel, 4, 9);
+  fillRect(frame, 20 + barrel + lean, 14 + bob, 3, 3, pose === 'shoot' ? 17 : 8);
   if (pose === 'hit') {
     return outline(
       recolorWhere(frame, (color) => (color < 0 ? -1 : phase % 2 === 0 ? 17 : 7)),
@@ -164,25 +164,35 @@ function shield(phase: number): Frame {
 function monarch(phase: number): Frame {
   const frame = empty(32, 32);
   const bob = phase % 2 === 0 ? 0 : -1;
-  fillRect(frame, 8, 14 + bob, 16, 12, 15);
-  fillEllipse(frame, 16, 12 + bob, 7, 6, 5);
-  fillRect(frame, 12, 10 + bob, 8, 2, 17);
-  fillRect(frame, 10, 6 + bob, 2, 4, 9);
-  fillRect(frame, 15, 5 + bob, 2, 5, 9);
-  fillRect(frame, 20, 6 + bob, 2, 4, 9);
-  fillRect(frame, 22, 16 + bob, 6, 8, 30);
+  fillRect(frame, 4, 14 + bob, 24, 16, 15);
+  fillRect(frame, 8, 16 + bob, 16, 12, 30);
+  fillRect(frame, 11, 14 + bob, 10, 12, 5);
+  fillRect(frame, 12, 24 + bob, 3, 6, 6);
+  fillRect(frame, 17, 24 + bob, 3, 6, 6);
+  fillEllipse(frame, 16, 11 + bob, 7, 6, 5);
+  fillRect(frame, 11, 11 + bob, 10, 2, 11);
+  fillRect(frame, 12, 10 + bob, 4, 1, 17);
+  fillRect(frame, 9, 7 + bob, 14, 3, 9);
+  fillRect(frame, 9, 3 + bob, 3, 5, 9);
+  fillRect(frame, 15, 2 + bob, 3, 6, 9);
+  fillRect(frame, 21, 3 + bob, 3, 5, 9);
+  fillRect(frame, 26, 16 + bob, 4, 10, 7);
   return outline(frame, 17);
 }
 
 function colossus(phase: number): Frame {
   const frame = empty(32, 32);
   const fist = phase % 2 === 0 ? 0 : -2;
-  fillRect(frame, 8, 10, 16, 16, 2);
-  fillRect(frame, 11, 14, 4, 2, 8);
-  fillRect(frame, 18, 14, 4, 2, 8);
-  fillRect(frame, 14, 20, 4, 3, 8);
-  fillRect(frame, 2, 16 + fist, 6, 6, 3);
-  fillRect(frame, 24, 16, 6, 6, 3);
+  fillRect(frame, 7, 24, 6, 6, 1);
+  fillRect(frame, 19, 24, 6, 6, 1);
+  fillRect(frame, 5, 10, 22, 16, 2);
+  fillRect(frame, 8, 12, 16, 4, 3);
+  fillRect(frame, 9, 3, 14, 9, 3);
+  fillRect(frame, 11, 6, 4, 2, 8);
+  fillRect(frame, 18, 6, 4, 2, 8);
+  fillRect(frame, 13, 10, 6, 2, 8);
+  fillRect(frame, 0, 14 + fist, 6, 8, 3);
+  fillRect(frame, 26, 14, 6, 8, 8);
   return outline(frame, 17);
 }
 
@@ -216,6 +226,18 @@ function gem(phase: number): Frame {
   fillRect(frame, 5, 5 + lift, 6, 2, 11);
   fillRect(frame, 4, 7 + lift, 8, 3, 12);
   fillRect(frame, 6, 10 + lift, 4, 2, 14);
+  return outline(frame, 17);
+}
+
+function brazier(phase: number): Frame {
+  const frame = empty(16, 16);
+  fillRect(frame, 3, 11, 10, 3, 2);
+  fillRect(frame, 2, 13, 12, 2, 1);
+  fillRect(frame, 6, 9, 4, 3, 3);
+  const flame = phase % 2 === 0 ? 8 : 9;
+  fillRect(frame, 7, 4 + (phase % 2), 2, 6, flame);
+  fillRect(frame, 5, 6, 2, 3, 7);
+  fillRect(frame, 9, 5, 2, 3, phase % 2 === 0 ? 17 : 8);
   return outline(frame, 17);
 }
 
@@ -277,6 +299,11 @@ export function redrawSheets(): Sheet[] {
     sheet(
       'spark',
       [0, 1, 2, 3].map((phase) => spark(phase)),
+      4,
+    ),
+    sheet(
+      'prop-brazier',
+      [0, 1, 2, 3].map((phase) => brazier(phase)),
       4,
     ),
   ];

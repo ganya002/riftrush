@@ -68,13 +68,14 @@ export function mountHud(scene: Phaser.Scene, read: () => HudState): Phaser.Game
   const plate = scene.add.graphics();
   const map = scene.add.graphics();
   const scale = hudScale(scene);
-  const weapon = pxText(scene, 0, 0, 'NONE', scale, PALETTE.bone);
-  const ammo = pxText(scene, 0, 0, '', scale, PALETTE.common);
-  const secondary = pxText(scene, 0, 0, '', scale, PALETTE.violet);
-  const dash = pxText(scene, 0, 0, 'DASH', scale, PALETTE.common);
+  const font = scale * 2;
+  const weapon = pxText(scene, 0, 0, 'NONE', font, PALETTE.bone);
+  const ammo = pxText(scene, 0, 0, '', font, PALETTE.common);
+  const secondary = pxText(scene, 0, 0, '', font, PALETTE.violet);
+  const dash = pxText(scene, 0, 0, 'DASH', font, PALETTE.common);
   const floor = pxText(scene, 0, 0, 'FL 0', scale, PALETTE.bone);
-  const gold = pxText(scene, 0, 0, 'G 0', scale, PALETTE.gold);
-  const shards = pxText(scene, 0, 0, '0', scale, PALETTE.rare);
+  const gold = pxText(scene, 0, 0, '0', font, PALETTE.gold);
+  const shards = pxText(scene, 0, 0, '0', font, PALETTE.rare);
   root.add([plate, weapon, ammo, secondary, dash, floor, gold, shards, map]);
 
   let state = emptyHud();
@@ -139,49 +140,41 @@ function paintHud(
   const weaponName = state.weaponName.trim() || 'NONE';
   text.weapon.setText(fitText(weaponName));
   text.weapon.setTint(weaponTint(weaponName));
-  text.ammo.setText(fitText(state.ammoLabel));
-  text.secondary.setText(fitText(state.secondaryLabel));
+  text.ammo.setText(fitText(slotLabel('Q', state.ammoLabel)));
+  text.secondary.setText(fitText(slotLabel('F', state.secondaryLabel)));
   text.secondary.setTint(PALETTE.violet);
-  text.dash.setText('DASH');
+  text.dash.setText(state.dashReady ? 'DASH' : '....');
   text.dash.setTint(state.dashReady ? PALETTE.mint : PALETTE.common);
   text.gold.setText(fitText(`GOLD ${Math.max(0, Math.trunc(state.gold))}`));
   text.gold.setTint(PALETTE.gold);
   text.shards.setText(fitText(`SHARDS ${Math.max(0, Math.trunc(state.shards))}`));
   text.shards.setTint(PALETTE.rare);
 
-  const rightWidth = Math.max(
-    text.weapon.width,
-    text.ammo.width,
-    text.secondary.width,
-    text.dash.width,
-    text.gold.width,
-    text.shards.width + 8 * scale,
-  );
-  const line = textHeight(scale);
-  const step = line + 2 * scale;
-  const blockH = step * 5 + line + 4 * scale;
-  const blockX = width - pad - rightWidth;
-  drawPlate(
-    plate,
-    blockX - 6 * scale,
-    pad - 4 * scale,
-    rightWidth + 10 * scale,
-    blockH + 4 * scale,
-  );
-  const right = width - pad;
-  text.shards.setPosition(right - text.shards.width, pad);
+  const line = Math.max(text.gold.height, textHeight(scale * 2));
+  const chipH = line + 8 * scale;
+  const shardChipW = 10 * scale + text.shards.width + 8 * scale;
+  const goldChipW = text.gold.width + 8 * scale;
+  const purseGap = 10 * scale;
+  const purseW = goldChipW + purseGap + shardChipW;
+  const purseX = width - pad - purseW;
+  drawPlate(plate, purseX, pad, goldChipW, chipH);
+  const shardPlate = purseX + goldChipW + purseGap;
+  drawPlate(plate, shardPlate, pad, shardChipW, chipH);
+  text.gold.setPosition(purseX + 4 * scale, pad + 4 * scale);
+  const shardX = shardPlate + 4 * scale;
   plate.fillStyle(PALETTE.rare, 1);
-  drawMiniDiamond(
-    plate,
-    right - text.shards.width - 7 * scale,
-    pad + Math.round(line / 2) - 2 * scale,
-    scale,
-  );
-  text.gold.setPosition(right - text.gold.width, pad + step);
-  text.weapon.setPosition(right - text.weapon.width, pad + step * 2);
-  text.ammo.setPosition(right - text.ammo.width, pad + step * 3);
-  text.secondary.setPosition(right - text.secondary.width, pad + step * 4);
-  text.dash.setPosition(right - text.dash.width, pad + step * 5);
+  drawMiniDiamond(plate, shardX, pad + Math.round(chipH / 2) - 2 * scale, scale);
+  text.shards.setPosition(shardX + 8 * scale, pad + 4 * scale);
+
+  const chips = [text.weapon, text.ammo, text.secondary, text.dash];
+  let chipX = pad;
+  const chipY = height - pad - chipH;
+  for (const chip of chips) {
+    const chipW = chip.width + 10 * scale;
+    drawPlate(plate, chipX, chipY, chipW, chipH);
+    chip.setPosition(chipX + 5 * scale, chipY + 4 * scale);
+    chipX += chipW + 4 * scale;
+  }
 
   paintMap(map, state.minimapRooms, width - pad, height - pad, scale);
 }
@@ -332,6 +325,14 @@ function weaponTint(name: string): number {
       weapon.id === name.toLowerCase() || weapon.name.toLowerCase() === name.toLowerCase(),
   );
   return found ? RARITY_COLOR[found.rarity] : PALETTE.bone;
+}
+
+function slotLabel(key: string, label: string): string {
+  const name = label
+    .replace(/^[QF]\s+/i, '')
+    .trim()
+    .split(' ')[0];
+  return `${key} ${name || '-'}`;
 }
 
 function fitFloor(floor: number): string {

@@ -222,6 +222,7 @@ export class RunScene extends Phaser.Scene {
   private dying = false;
   private ambientT = 0.2;
   private vignette: Phaser.GameObjects.Graphics | null = null;
+  private pool: Phaser.GameObjects.Image | null = null;
   private pad: PadRead = emptyPad();
   private padWas = { dash: false, interact: false, primary: false, secondary: false };
   private pointerX = -1;
@@ -302,6 +303,12 @@ export class RunScene extends Phaser.Scene {
     this.enemyBullets = this.physics.add.group({ maxSize: 260, allowGravity: false });
     this.player = this.physics.add.sprite(160, 90, 'player', 0);
     this.player.setDepth(14);
+    this.pool = this.add
+      .image(0, 0, 'glow')
+      .setDepth(1)
+      .setScale(1.4)
+      .setAlpha(0.22)
+      .setTint(0xc77dff);
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     body.setSize(12, 14, true);
     body.setCollideWorldBounds(false);
@@ -309,7 +316,7 @@ export class RunScene extends Phaser.Scene {
     this.cross = this.add
       .image(0, 0, this.textures.exists('glow-cyan') ? 'glow-cyan' : 'glow')
       .setDepth(80)
-      .setScale(0.2);
+      .setScale(0.12);
     this.flash = this.add
       .rectangle(
         this.scale.width / 2,
@@ -341,6 +348,9 @@ export class RunScene extends Phaser.Scene {
     this.scale.on('resize', this.onResize, this);
     this.toastText.setVisible(false);
     this.physics.add.collider(this.player, this.walls);
+    this.physics.add.collider(this.enemyBullets, this.walls, (obj) => {
+      (obj as Phaser.Physics.Arcade.Image).disableBody(true, true);
+    });
     this.physics.add.collider(this.playerBullets, this.walls, (obj) => {
       this.hitWall(obj as Phaser.Physics.Arcade.Image);
     });
@@ -417,6 +427,7 @@ export class RunScene extends Phaser.Scene {
     this.hitAnim = Math.max(0, this.hitAnim - dt);
     this.shootAnim = Math.max(0, this.shootAnim - dt);
     this.ambient(dt);
+    this.pool?.setPosition(this.player.x, this.player.y + 8);
     this.pad = this.readPad();
     if (this.bossHold > 0) {
       this.bossHold = Math.max(0, this.bossHold - dt);
@@ -498,6 +509,7 @@ export class RunScene extends Phaser.Scene {
     this.sealed = fight;
     this.rebuildTiles(!fight);
     this.furnish(room);
+    this.dressProps();
     this.frameRoom();
     this.cameras.main.startFollow(this.player, true, 0.22, 0.22);
     this.cameras.main.setFollowOffset(32, -24);
@@ -542,6 +554,7 @@ export class RunScene extends Phaser.Scene {
       biome: this.floor.biome,
       onCleared: () => this.onRoomCleared(),
       damagePlayer: (amount, fromX, fromY) => this.damagePlayer(amount, fromX, fromY),
+      walls: this.walls,
     });
     if (hookKind === 'event') this.openDoors();
     this.syncCameras();
@@ -721,6 +734,16 @@ export class RunScene extends Phaser.Scene {
     for (let r = 1; r < rows - 1; r += 1) {
       for (let c = 1; c < cols - 1; c += 1) grid[r]![c] = 0;
     }
+    const midR = Math.floor(rows / 2);
+    const midC = Math.floor(cols / 2);
+    for (let r = 3; r < rows - 3; r += 4) {
+      for (let c = 3; c < cols - 3; c += 4) {
+        if (Math.abs(r - midR) <= 2 && Math.abs(c - midC) <= 2) continue;
+        if (r === midR || c === midC) continue;
+        const row = grid[r];
+        if (row) row[c] = 1;
+      }
+    }
     if (open) {
       for (const door of this.room.doors) {
         const cell = this.doorCell(door.dir);
@@ -729,6 +752,29 @@ export class RunScene extends Phaser.Scene {
       }
     }
     return grid;
+  }
+
+  private dressProps(): void {
+    const rows = this.room.height;
+    const cols = this.room.width;
+    const midR = Math.floor(rows / 2);
+    const midC = Math.floor(cols / 2);
+    const warm =
+      this.floor.biome === 'ash' ? 0xff6b35 : this.floor.biome === 'abyss' ? 0x4cc9f0 : 0xc77dff;
+    for (let r = 2; r < rows - 2; r += 3) {
+      for (let c = 2; c < cols - 2; c += 3) {
+        if ((r * 2 + c) % 5 !== 0) continue;
+        if (r % 4 === 3 && c % 4 === 3) continue;
+        if (Math.abs(r - midR) <= 1 && Math.abs(c - midC) <= 1) continue;
+        if (r === midR || c === midC) continue;
+        const x = this.origin.x + c * TILE + TILE / 2;
+        const y = this.origin.y + r * TILE + TILE / 2;
+        const key = this.textures.exists('prop-brazier') ? 'prop-brazier' : 'glow';
+        const sprite = this.add.sprite(x, y, key).setDepth(3).setTint(warm);
+        if (this.anims.exists('prop-brazier')) sprite.play('prop-brazier');
+        this.props.push(sprite);
+      }
+    }
   }
 
   private openDoors(): void {
@@ -1488,12 +1534,12 @@ export class RunScene extends Phaser.Scene {
     } else if (this.pad.x !== 0 || this.pad.y !== 0) {
       this.aim = Math.atan2(this.pad.y, this.pad.x);
     }
-    const reach = 28;
+    const reach = 46;
     this.cross.setPosition(
       this.player.x + Math.cos(this.aim) * reach,
       this.player.y + Math.sin(this.aim) * reach,
     );
-    this.cameras.main.setFollowOffset(0, 0);
+    this.cameras.main.setFollowOffset(36, -28);
   }
 
   private dress(dt: number): void {

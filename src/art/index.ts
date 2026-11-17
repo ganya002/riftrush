@@ -134,6 +134,7 @@ export function bootArt(scene: Phaser.Scene): void {
   addAnim(scene, 'chest-idle', 'chest', 0, 3, 5, -1);
   addAnim(scene, 'shopkeep-idle', 'shopkeep', 0, 3, 5, -1);
   addAnim(scene, 'cursed-chest-idle', 'cursed-chest', 0, 3, 6, -1);
+  addAnim(scene, 'prop-brazier', 'prop-brazier', 0, 3, 12, -1);
 }
 
 export function blitAutotile(
