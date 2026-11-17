@@ -83,21 +83,23 @@ function addAnim(
  * Build every texture and animation. Safe to call more than once:
  * existing texture and animation keys are left in place.
  *
- * Player sheet `player` (32×32, 16 frames):
- *   player-idle 0–3, player-run 4–7, player-dash 8–11, player-hit 12–15.
- *   `player` is an idle alias.
- * Enemy sheets play `<key>-idle` (and `<key>` as the same loop).
- * Bullets loop under their texture key.
+ * Player sheet `player` (32×32, 24 frames) at 24fps:
+ *   idle 0–3, run 4–7, dash 8–11, shoot 12–15, hit 16–19, death 20–23.
+ * Enemy sheets: idle 0–3, attack telegraph 4–7 (`<key>-tell`).
+ * Bullets, the pickup gem, and sparks loop under their texture key.
  */
 export function bootArt(scene: Phaser.Scene): void {
   const sheets = [...actorSheets(), ...tileSheets()];
   for (const art of sheets) upload(scene, art);
 
-  addAnim(scene, 'player-idle', 'player', 0, 3, 6, -1);
-  addAnim(scene, 'player', 'player', 0, 3, 6, -1);
-  addAnim(scene, 'player-run', 'player', 4, 7, 10, -1);
-  addAnim(scene, 'player-dash', 'player', 8, 11, 16, 0);
-  addAnim(scene, 'player-hit', 'player', 12, 15, 12, 0);
+  const rate = 24;
+  addAnim(scene, 'player-idle', 'player', 0, 3, rate, -1);
+  addAnim(scene, 'player', 'player', 0, 3, rate, -1);
+  addAnim(scene, 'player-run', 'player', 4, 7, rate, -1);
+  addAnim(scene, 'player-dash', 'player', 8, 11, rate, 0);
+  addAnim(scene, 'player-shoot', 'player', 12, 15, rate, 0);
+  addAnim(scene, 'player-hit', 'player', 16, 19, rate, 0);
+  addAnim(scene, 'player-death', 'player', 20, 23, rate, 0);
 
   const enemies = [
     'enemy-chaser',
@@ -112,9 +114,9 @@ export function bootArt(scene: Phaser.Scene): void {
     'enemy-boss-b',
   ];
   for (const key of enemies) {
-    const rate = key === 'enemy-teleporter' ? 10 : key.startsWith('enemy-boss') ? 5 : 7;
-    addAnim(scene, `${key}-idle`, key, 0, 3, rate, -1);
-    addAnim(scene, key, key, 0, 3, rate, -1);
+    addAnim(scene, `${key}-idle`, key, 0, 3, 24, -1);
+    addAnim(scene, key, key, 0, 3, 24, -1);
+    addAnim(scene, `${key}-tell`, key, 4, 7, 24, 0);
   }
 
   for (const key of [
@@ -123,8 +125,10 @@ export function bootArt(scene: Phaser.Scene): void {
     'bullet-laser',
     'bullet-orb',
     'bullet-enemy',
+    'pickup',
+    'spark',
   ]) {
-    addAnim(scene, key, key, 0, 3, 14, -1);
+    addAnim(scene, key, key, 0, 3, 24, -1);
   }
   addAnim(scene, 'glow-pulse', 'glow', 0, 3, 8, -1);
   addAnim(scene, 'chest-idle', 'chest', 0, 3, 5, -1);

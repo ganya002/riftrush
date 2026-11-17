@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { loadSave } from '../meta';
 import { addPanel, button, pin, placeCentered, stageOfScene, unit } from './draw';
-import { pxText, textHeight } from './font';
+import { pxText } from './font';
 import { createRift } from './rift';
 import { PALETTE } from './theme';
 
@@ -11,10 +11,17 @@ export interface SummaryData {
   shardsEarned: number;
   seed: number;
   killedBy: string;
+  characterId?: string;
 }
 
 export class SummaryScene extends Phaser.Scene {
-  private payload: SummaryData = { floor: 0, shardsEarned: 0, seed: 0, killedBy: 'Unknown' };
+  private payload: SummaryData = {
+    floor: 0,
+    shardsEarned: 0,
+    seed: 0,
+    killedBy: 'Unknown',
+    characterId: 'vesper',
+  };
   private drawRift: (time: number) => void = () => {};
   private layer?: Phaser.GameObjects.Container;
   private dead = false;
@@ -32,6 +39,10 @@ export class SummaryScene extends Phaser.Scene {
       shardsEarned: whole(source.shardsEarned),
       seed: whole(source.seed),
       killedBy: killedBy || 'Unknown',
+      characterId:
+        typeof source.characterId === 'string' && source.characterId
+          ? source.characterId
+          : 'vesper',
     };
   }
 
@@ -84,6 +95,7 @@ export class SummaryScene extends Phaser.Scene {
       ['BANK', String(loadSave().shards)],
       ['SEED', String(this.payload.seed)],
       ['KILLED BY', this.payload.killedBy],
+      ['NEXT', 'GO DEEPER'],
     ];
     const rowScale = 2 * stage.S;
     const texts = rows.map(([label, value], index) => {
@@ -102,8 +114,20 @@ export class SummaryScene extends Phaser.Scene {
     button(
       this,
       layer,
-      Math.round(center - unit(stage, 70)),
-      stage.y + unit(stage, 226),
+      Math.round(center - unit(stage, 148)),
+      stage.y + unit(stage, 228),
+      unit(stage, 140),
+      unit(stage, 24),
+      'AGAIN',
+      rowScale,
+      () => this.goAgain(),
+      { accent: PALETTE.gold, text: PALETTE.gold },
+    );
+    button(
+      this,
+      layer,
+      Math.round(center + unit(stage, 8)),
+      stage.y + unit(stage, 228),
       unit(stage, 140),
       unit(stage, 24),
       'RETURN',
@@ -114,10 +138,7 @@ export class SummaryScene extends Phaser.Scene {
       },
     );
 
-    const hint = pxText(this, 0, 0, 'ENTER', stage.S, PALETTE.common);
-    placeCentered(hint, center, stage.y + stage.h - textHeight(stage.S) - unit(stage, 8));
-
-    layer.add([rift, mint, bone, panel, ...texts, hint]);
+    layer.add([rift, mint, bone, panel, ...texts]);
     pin(layer);
   }
 
@@ -126,6 +147,15 @@ export class SummaryScene extends Phaser.Scene {
     this.leaving = true;
     this.time.delayedCall(0, () => this.goHub());
   };
+
+  private goAgain(): void {
+    if (!this.scene.isActive()) return;
+    this.leaving = true;
+    this.scene.start('run', {
+      characterId: this.payload.characterId || 'vesper',
+      seed: this.payload.seed,
+    });
+  }
 
   private goHub(): void {
     if (!this.scene.isActive()) return;

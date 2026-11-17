@@ -29,6 +29,9 @@ export class TitleScene extends Phaser.Scene {
 
   update(time: number): void {
     this.drawRift(time);
+    if (!this.prompt) return;
+    const pulse = 0.45 + 0.55 * Math.abs(Math.sin(time / 260));
+    this.prompt.setAlpha(pulse);
   }
 
   private layout(): void {

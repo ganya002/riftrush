@@ -98,11 +98,17 @@ function floorTile(biome: Biome, mask: number, variant: number): Frame {
   for (let y = 0; y < 16; y++) {
     for (let x = 0; x < 16; x++) {
       const cell = hash(x >> 1, y >> 1, ink.salt + variant * 5);
-      const grain = hash(x, y, ink.salt + variant * 13);
       let color = ink.floor0;
-      if (cell % 6 === 0) color = ink.floor1;
-      if (grain % 11 === 0) color = ink.floor2;
-      if (cell % 19 === 0 && grain % 2 === 0) color = ink.speck;
+      if (cell % 7 === 0) color = ink.floor1;
+      if (hash(x, y, ink.salt + variant * 13) % 29 === 0) color = ink.speck;
+      if (mask === 0 && variant === 1) {
+        const motif = biome === 'ash' ? 8 : biome === 'abyss' ? 11 : 15;
+        const mark =
+          (x === 8 && y === 8) ||
+          (x === 8 && (y === 6 || y === 10)) ||
+          (y === 8 && (x === 6 || x === 10));
+        if (mark) color = motif;
+      }
       const shadow = (n && y < LIP) || (w && x < LIP) || (s && y > 15 - LIP) || (e && x > 15 - LIP);
       if (shadow) color = ink.shadow;
       if (n && w && x < LIP && y < LIP) color = ink.floor2;

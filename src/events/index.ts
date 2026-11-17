@@ -27,6 +27,14 @@ export const EVENT_DETAILS = {
     name: 'Everything Explodes',
     blurb: 'Impacts detonate. So do the corpses.',
   },
+  shrine: {
+    name: 'Shrine',
+    blurb: 'A quiet light. It gives a heart back.',
+  },
+  armory: {
+    name: 'Armory',
+    blurb: 'A rack of guns nobody came back for.',
+  },
 } as const;
 
 export type EventId = keyof typeof EVENT_DETAILS;
@@ -51,6 +59,8 @@ export interface EventPayload {
   /** Chance in 0..1 that an impact detonates. */
   explodeChance?: number;
   invertSeconds?: number;
+  /** Hearts restored by a shrine. */
+  healHearts?: number;
 }
 
 export interface RoomEvent {
@@ -132,6 +142,10 @@ export function eventPayload(id: EventId, floor: number, rng: () => number): Eve
       const chance = Math.min(0.55, 0.15 + (f - 1) * 0.01 + roll * 0.1);
       return { explodeChance: roundTo(chance, 3) };
     }
+    case 'shrine':
+      return { healHearts: 1 + Math.floor(f / 6) };
+    case 'armory':
+      return { goldMultiplier: 1 };
     default: {
       const neverId: never = id;
       throw new Error(`unknown event ${String(neverId)}`);

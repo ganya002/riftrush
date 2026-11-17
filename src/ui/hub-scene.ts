@@ -110,7 +110,7 @@ export class HubScene extends Phaser.Scene {
   ): void {
     addChrome(chrome, at(8), down(8), unit(stage, 464), unit(stage, 22), PALETTE.violet);
     root.add(pxText(this, at(16), down(11), 'RIFTRUSH', font, PALETTE.bone));
-    const shardsText = pxText(this, 0, down(11), String(shards), font, PALETTE.gold);
+    const shardsText = pxText(this, 0, down(11), `SHARDS ${shards}`, font, PALETTE.gold);
     shardsText.setPosition(at(456) - shardsText.width, down(11));
     root.add(shardsText);
     paintDiamond(

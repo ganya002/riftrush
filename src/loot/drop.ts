@@ -77,7 +77,7 @@ function rollWeapon(base: Weapon, rarity: Rarity, rng: () => number): Weapon {
   };
   if (rarity === 'cursed') {
     weapon.drawback = 'Cursed rounds nick the shooter';
-    weapon.hpDelta = roundTo(-16 * factor, 2);
+    weapon.hpDelta = roundTo(-8 * factor, 2);
   }
   return weapon;
 }

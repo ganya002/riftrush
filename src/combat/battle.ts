@@ -252,6 +252,7 @@ class Encounter {
       foe.telling = false;
       if (foe.boss) stepBoss(this.actx, foe);
       else stepFoe(this.actx, foe);
+      this.pose(foe);
     }
     if (this.disposed) return;
 
@@ -290,6 +291,14 @@ class Encounter {
         mirror: plan.elite === 'mirrored',
       });
     }
+  }
+
+  private pose(foe: Foe): void {
+    const telling = foe.telling || foe.state === 'arrive' || foe.state === 'phase';
+    const key = telling ? `${textureKey(foe.kind)}-tell` : `${textureKey(foe.kind)}-idle`;
+    const anims = foe.sprite.anims;
+    if (!anims || !foe.sprite.scene?.anims.exists(key)) return;
+    anims.play(key, true);
   }
 
   private spawnBoss(): void {

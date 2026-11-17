@@ -144,9 +144,9 @@ function paintHud(
   text.secondary.setTint(PALETTE.violet);
   text.dash.setText('DASH');
   text.dash.setTint(state.dashReady ? PALETTE.mint : PALETTE.common);
-  text.gold.setText(fitText(`G ${Math.max(0, Math.trunc(state.gold))}`));
+  text.gold.setText(fitText(`GOLD ${Math.max(0, Math.trunc(state.gold))}`));
   text.gold.setTint(PALETTE.gold);
-  text.shards.setText(fitText(String(Math.max(0, Math.trunc(state.shards)))));
+  text.shards.setText(fitText(`SHARDS ${Math.max(0, Math.trunc(state.shards))}`));
   text.shards.setTint(PALETTE.rare);
 
   const rightWidth = Math.max(

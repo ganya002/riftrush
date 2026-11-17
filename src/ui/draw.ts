@@ -143,8 +143,14 @@ export function card(
   if (onClick) {
     const zone = scene.add.zone(width / 2, height / 2, width, height);
     zone.setInteractive({ useHandCursor: true });
-    zone.on('pointerover', () => paint(PALETTE.bone));
-    zone.on('pointerout', () => paint(accent));
+    zone.on('pointerover', () => {
+      paint(PALETTE.bone);
+      holder.setY(Math.round(y) - Math.max(1, Math.round(height / 28)));
+    });
+    zone.on('pointerout', () => {
+      paint(accent);
+      holder.setY(Math.round(y));
+    });
     zone.on('pointerup', () => {
       scene.time.delayedCall(0, onClick);
     });

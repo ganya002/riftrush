@@ -62,8 +62,8 @@ import { PixText, textWidth } from './text';
 
 const TILE = 16;
 const GAP = 8192;
-const ACCEL = 3400;
-const FRICTION = 2800;
+const ACCEL = 4800;
+const FRICTION = 4200;
 const DASH_SPEED = 320;
 
 const OPP: Record<DoorDir, DoorDir> = { n: 's', s: 'n', e: 'w', w: 'e' };
@@ -218,6 +218,10 @@ export class RunScene extends Phaser.Scene {
   private uiCam: Phaser.Cameras.Scene2D.Camera | null = null;
   private bossHold = 0;
   private hitAnim = 0;
+  private shootAnim = 0;
+  private dying = false;
+  private ambientT = 0.2;
+  private vignette: Phaser.GameObjects.Graphics | null = null;
   private pad: PadRead = emptyPad();
   private padWas = { dash: false, interact: false, primary: false, secondary: false };
   private pointerX = -1;
@@ -329,6 +333,11 @@ export class RunScene extends Phaser.Scene {
     this.uiCam.setScroll(0, 0);
     this.uiCam.roundPixels = true;
     this.uiCam.transparent = true;
+    this.vignette = this.add
+      .graphics()
+      .setScrollFactor(0)
+      .setDepth(40)
+      .setName('riftrush-vignette');
     this.scale.on('resize', this.onResize, this);
     this.toastText.setVisible(false);
     this.physics.add.collider(this.player, this.walls);
@@ -406,6 +415,8 @@ export class RunScene extends Phaser.Scene {
     this.activeCd = Math.max(0, this.activeCd - dt);
     this.secondaryCd = Math.max(0, this.secondaryCd - dt);
     this.hitAnim = Math.max(0, this.hitAnim - dt);
+    this.shootAnim = Math.max(0, this.shootAnim - dt);
+    this.ambient(dt);
     this.pad = this.readPad();
     if (this.bossHold > 0) {
       this.bossHold = Math.max(0, this.bossHold - dt);
@@ -488,7 +499,9 @@ export class RunScene extends Phaser.Scene {
     this.rebuildTiles(!fight);
     this.furnish(room);
     this.frameRoom();
-    this.cameras.main.startFollow(this.player, true, 1, 1);
+    this.cameras.main.startFollow(this.player, true, 0.22, 0.22);
+    this.cameras.main.setFollowOffset(32, -24);
+    this.flash.setFillStyle(0xf4efe6, 1).setAlpha(0.72);
     const spawn = this.spawnPoint(arrival);
     this.player.setPosition(spawn.x, spawn.y);
     this.player.setVelocity(0, 0);
@@ -550,6 +563,38 @@ export class RunScene extends Phaser.Scene {
     this.uiCam?.setScroll(0, 0);
     this.flash.setPosition(viewW / 2, viewH / 2).setSize(viewW, viewH);
     this.toastText.setPosition(viewW / 2, 28);
+    this.paintVignette(viewW, viewH);
+  }
+
+  private paintVignette(viewW: number, viewH: number): void {
+    const art = this.vignette;
+    if (!art) return;
+    art.clear();
+    const bands = 5;
+    for (let i = 0; i < bands; i += 1) {
+      const inset = i * 6;
+      const alpha = 0.22 - i * 0.03;
+      art.fillStyle(0x0d0b14, Math.max(0.05, alpha));
+      art.fillRect(inset, inset, viewW - inset * 2, 6);
+      art.fillRect(inset, viewH - inset - 6, viewW - inset * 2, 6);
+      art.fillRect(inset, inset, 6, viewH - inset * 2);
+      art.fillRect(viewW - inset - 6, inset, 6, viewH - inset * 2);
+    }
+  }
+
+  private ambient(dt: number): void {
+    if (!this.room || this.dead) return;
+    this.ambientT -= dt;
+    if (this.ambientT > 0) return;
+    this.ambientT = 0.45;
+    const roomW = this.room.width * TILE;
+    const roomH = this.room.height * TILE;
+    const x = this.origin.x + 20 + Math.random() * Math.max(8, roomW - 40);
+    const y = this.origin.y + 20 + Math.random() * Math.max(8, roomH - 40);
+    if (Math.hypot(x - this.player.x, y - this.player.y) < 36) return;
+    const tint =
+      this.floor?.biome === 'ash' ? 0xff6b35 : this.floor?.biome === 'abyss' ? 0x4cc9f0 : 0xc77dff;
+    puff(this, x, y, tint, 1, 8);
   }
 
   private onResize = (): void => {
@@ -569,7 +614,8 @@ export class RunScene extends Phaser.Scene {
         name === 'riftrush-hud' ||
         name === 'riftrush-pause' ||
         name === 'riftrush-toast' ||
-        name === 'riftrush-flash';
+        name === 'riftrush-flash' ||
+        name === 'riftrush-vignette';
       if (pinned) {
         child.cameraFilter |= worldBit;
         child.cameraFilter &= ~uiBit;
@@ -758,6 +804,8 @@ export class RunScene extends Phaser.Scene {
       if (event.id === 'hp-merchant') this.spawnHeartMerchant(center.x, center.y, event.payload);
       else if (event.id === 'cursed-chest')
         this.spawnChest(center.x, center.y, true, event.payload);
+      else if (event.id === 'shrine') this.spawnShrine(center.x, center.y, event.payload);
+      else if (event.id === 'armory') this.spawnArmory(center.x, center.y);
     }
     if (room.kind === 'start' && asEvent(this.floor.modifier) === 'hp-merchant') {
       this.spawnHeartMerchant(center.x, center.y + 28, this.floorPayload);
@@ -916,6 +964,46 @@ export class RunScene extends Phaser.Scene {
     });
   }
 
+  private spawnShrine(x: number, y: number, payload: EventPayload | null): void {
+    const heal = Math.max(1, payload?.healHearts ?? 1);
+    const key = this.textures.exists('pickup') ? 'pickup' : 'glow-cyan';
+    const sprite = this.add.sprite(x, y, key).setDepth(8);
+    if (this.anims.exists('pickup')) sprite.play('pickup');
+    this.props.push(sprite);
+    this.interacts.push({
+      x,
+      y,
+      r: 24,
+      text: `E PRAY +${heal}`,
+      run: () => {
+        if (!sprite.visible) return;
+        this.hp = Math.min(this.maxHp, this.hp + heal);
+        sprite.setVisible(false);
+        sfx('pickup');
+        floatText(this, x, y - 12, `+${heal}`, 0x7dffb3);
+      },
+    });
+  }
+
+  private spawnArmory(x: number, y: number): void {
+    const key = this.textures.exists('chest') ? 'chest' : 'glow';
+    const sprite = this.add.sprite(x, y, key).setDepth(8);
+    if (this.anims.exists('chest-idle')) sprite.play('chest-idle');
+    this.props.push(sprite);
+    this.interacts.push({
+      x,
+      y,
+      r: 24,
+      text: 'E ARMORY',
+      run: () => {
+        if (!sprite.visible) return;
+        sprite.setVisible(false);
+        this.tryDrop(x, y - 16);
+        sfx('pickup');
+      },
+    });
+  }
+
   private spawnKeeper(x: number, y: number): void {
     const key = this.textures.exists('shopkeep') ? 'shopkeep' : 'glow';
     const sprite = this.add.sprite(x, y, key).setDepth(8);
@@ -942,7 +1030,7 @@ export class RunScene extends Phaser.Scene {
   }
 
   private spawnPickup(x: number, y: number, drop: Drop): void {
-    const key = drop.kind === 'relic' ? 'glow-pink' : 'glow-cyan';
+    const key = drop.kind === 'relic' ? 'pickup' : 'glow-cyan';
     const sprite = this.add.image(x, y, this.textures.exists(key) ? key : 'glow').setDepth(9);
     this.props.push(sprite);
     this.pickups.push({ sprite, drop });
@@ -1201,9 +1289,10 @@ export class RunScene extends Phaser.Scene {
 
   private shoot(): void {
     const firing = this.input.activePointer.leftButtonDown() || this.pad.shoot;
-    if (!firing || this.fireCd > 0) return;
+    if (!firing || this.fireCd > 0 || this.dying) return;
     const haste = this.overdrive > 0 ? 0.45 : 1;
-    this.fireCd = Math.max(0.045, (this.gun.cooldownMs / 1000) * haste);
+    this.fireCd = Math.max(0.04, (this.gun.cooldownMs / 1000) * haste);
+    this.shootAnim = 0.16;
     const damage = this.gun.damage * this.fury;
     if (this.gun.beam) this.fireBeam(this.aim, damage);
     else {
@@ -1411,14 +1500,17 @@ export class RunScene extends Phaser.Scene {
     const moving = Math.hypot(this.vx, this.vy) > 8;
     this.player.setRotation(0);
     this.player.setFlipX(Math.cos(this.aim) < 0);
-    const anim =
-      this.hitAnim > 0
+    const anim = this.dying
+      ? 'player-death'
+      : this.hitAnim > 0
         ? 'player-hit'
         : this.dashing > 0
           ? 'player-dash'
-          : moving
-            ? 'player-run'
-            : 'player-idle';
+          : this.shootAnim > 0
+            ? 'player-shoot'
+            : moving
+              ? 'player-run'
+              : 'player-idle';
     if (this.anims.exists(anim)) this.player.anims.play(anim, true);
     this.player.setAlpha(
       this.invuln > 0 && this.dashing <= 0 && Math.sin(this.time.now / 40) > 0 ? 0.35 : 1,
@@ -1600,7 +1692,9 @@ export class RunScene extends Phaser.Scene {
   private die(): void {
     if (this.dead) return;
     this.dead = true;
+    this.dying = true;
     this.player.setVelocity(0, 0);
+    if (this.anims.exists('player-death')) this.player.anims.play('player-death');
     burst(this, this.player.x, this.player.y, 0xff2e63, 18, 90);
     sfx('explode');
     triggerHitstop(70);
@@ -1618,6 +1712,7 @@ export class RunScene extends Phaser.Scene {
       shardsEarned,
       seed: this.seed,
       killedBy: this.killedBy,
+      characterId: this.characterId,
     });
   }
 
@@ -1677,10 +1772,10 @@ export class RunScene extends Phaser.Scene {
     if (!arrival) return center;
     const cell = this.doorCell(arrival);
     const door = this.cellCenter(cell.c, cell.r);
-    if (arrival === 'n') return { x: door.x, y: this.origin.y + 36 };
-    if (arrival === 's') return { x: door.x, y: this.origin.y + this.room.height * TILE - 36 };
-    if (arrival === 'w') return { x: this.origin.x + 36, y: door.y };
-    return { x: this.origin.x + this.room.width * TILE - 36, y: door.y };
+    if (arrival === 'n') return { x: door.x, y: this.origin.y + 56 };
+    if (arrival === 's') return { x: door.x, y: this.origin.y + this.room.height * TILE - 56 };
+    if (arrival === 'w') return { x: this.origin.x + 56, y: door.y };
+    return { x: this.origin.x + this.room.width * TILE - 56, y: door.y };
   }
 
   private doorCell(dir: DoorDir): { c: number; r: number } {

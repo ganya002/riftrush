@@ -145,7 +145,7 @@ export function puff(
   count = 1,
   speed = 20,
 ): void {
-  const key = juiceKey(scene, ['glow-cyan', 'glow']);
+  const key = juiceKey(scene, ['spark', 'glow-cyan', 'glow']);
   if (!key) return;
   for (let i = 0; i < count; i += 1) {
     const angle = Math.random() * Math.PI * 2;
