@@ -1,10 +1,10 @@
 import { roundTo } from './round';
 import type { Relic, RelicMods, Weapon } from './types';
 
-const BURNING_BOUNCE_DAMAGE = 1.12;
-const CHAIN_DAMAGE = 1.1;
-const WIDER_FIRE_SPREAD = 0.22;
-const WIDER_FIRE_DAMAGE = 1.06;
+const BURNING_BOUNCE_DAMAGE = 1.35;
+const CHAIN_DAMAGE = 1.28;
+const WIDER_FIRE_SPREAD = 0.28;
+const WIDER_FIRE_DAMAGE = 1.18;
 
 function applyMods(weapon: Weapon, mods: RelicMods): void {
   if (mods.damageAdd !== undefined) weapon.damage += mods.damageAdd;
@@ -56,6 +56,10 @@ export function applySynergies(weapon: Weapon, relics: readonly Relic[]): Weapon
     next.chain = true;
     next.damage *= CHAIN_DAMAGE;
     next.pierce += 1;
+  } else if (next.pierce > 0 && next.bounce > 0) {
+    next.chain = false;
+    next.pierce += 1;
+    next.damage *= 1.12;
   } else {
     next.chain = false;
   }

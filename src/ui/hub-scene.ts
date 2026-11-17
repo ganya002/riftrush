@@ -24,7 +24,7 @@ import {
   type Stage,
 } from './draw';
 import { pxText, textHeight, textWidth } from './font';
-import { createRift } from './rift';
+import { paintBackdrop } from './backdrop';
 import { PALETTE, RARITY_COLOR } from './theme';
 
 /** Data passed to the run scene. */
@@ -40,7 +40,7 @@ const HUNTER: Record<string, number> = {
 };
 
 export class HubScene extends Phaser.Scene {
-  private drawRift: (time: number) => void = () => {};
+  private backdrop?: Phaser.GameObjects.Container;
   private root?: Phaser.GameObjects.Container;
   private selectedId = 'vesper';
   private seed = 1;
@@ -60,16 +60,21 @@ export class HubScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(PALETTE.void);
     this.selectedId = 'vesper';
     this.seed = rollSeed();
-    this.drawRift = createRift(this, 0.62);
-    this.drawRift(0);
+    this.mountWorld();
     this.render();
     this.input.keyboard?.on('keydown', this.onKey);
-    this.scale.on('resize', this.render, this);
+    this.scale.on('resize', this.onResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.onShutdown, this);
   }
 
-  update(time: number): void {
-    this.drawRift(time);
+  private onResize = (): void => {
+    this.mountWorld();
+    this.render();
+  };
+
+  private mountWorld(): void {
+    this.backdrop?.destroy(true);
+    this.backdrop = paintBackdrop(this, 'rift');
   }
 
   private render(): void {
@@ -110,7 +115,7 @@ export class HubScene extends Phaser.Scene {
   ): void {
     addChrome(chrome, at(8), down(8), unit(stage, 464), unit(stage, 22), PALETTE.violet);
     root.add(pxText(this, at(16), down(11), 'RIFTRUSH', font, PALETTE.bone));
-    const shardsText = pxText(this, 0, down(11), String(shards), font, PALETTE.gold);
+    const shardsText = pxText(this, 0, down(11), `SHARDS ${shards}`, font, PALETTE.gold);
     shardsText.setPosition(at(456) - shardsText.width, down(11));
     root.add(shardsText);
     paintDiamond(
@@ -191,6 +196,10 @@ export class HubScene extends Phaser.Scene {
     const accent = HUNTER[selected.id] ?? PALETTE.violet;
     addChrome(chrome, at(170), down(34), unit(stage, 302), unit(stage, 108), accent);
     root.add(pxText(this, at(182), down(42), selected.name, font, PALETTE.bone));
+    const portrait = this.add.sprite(at(440), down(78), 'player', 0);
+    portrait.setScale(2 * stage.S);
+    if (this.anims.exists('player-idle')) portrait.play('player-idle');
+    root.add(portrait);
     const blurb = pxText(this, at(182), down(60), selected.blurb, small, PALETTE.common);
     blurb.setMaxWidth(unit(stage, 200));
     root.add(blurb);
@@ -488,7 +497,7 @@ export class HubScene extends Phaser.Scene {
   private onShutdown(): void {
     this.dead = true;
     this.input.keyboard?.off('keydown', this.onKey);
-    this.scale.off('resize', this.render, this);
+    this.scale.off('resize', this.onResize, this);
   }
 }
 

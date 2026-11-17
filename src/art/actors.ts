@@ -16,6 +16,7 @@ import {
   type Frame,
   type Sheet,
 } from './frame';
+import { redrawSheets } from './redraw';
 
 /**
  * Actors face right. Silhouettes:
@@ -806,7 +807,7 @@ function glowCluster(hot: number, mid: number, edge: number): { frame: Frame; al
   return { frame, alpha };
 }
 
-export function actorSheets(): Sheet[] {
+function legacySheets(): Sheet[] {
   const pink = glowCluster(7, 16, 15);
   const cyan = glowCluster(11, 12, 13);
   return [
@@ -835,4 +836,11 @@ export function actorSheets(): Sheet[] {
     sheet('glow-pink', [pink.frame], 1, [pink.alpha]),
     sheet('glow-cyan', [cyan.frame], 1, [cyan.alpha]),
   ];
+}
+
+/** Redrawn cast first. Chests, the shopkeep, and glows stay from the prop sheets. */
+export function actorSheets(): Sheet[] {
+  const fresh = redrawSheets();
+  const replaced = new Set(fresh.map((art) => art.key));
+  return [...fresh, ...legacySheets().filter((art) => !replaced.has(art.key))];
 }

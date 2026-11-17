@@ -97,7 +97,7 @@ export function mountPause(scene: Phaser.Scene, opts: PauseOptions): Phaser.Game
     const chrome = scene.add.graphics();
     addPanel(chrome, panelX, panelY, panelW, panelH, PALETTE.mint);
 
-    const title = pxText(scene, 0, 0, 'PAUSED', 3 * S, PALETTE.bone);
+    const title = pxText(scene, 0, 0, 'SETTINGS', 3 * S, PALETTE.bone);
     title.setPosition(Math.round(panelX + (panelW - title.width) / 2), panelY + 12 * S);
 
     const label = pxText(scene, panelX + 16 * S, panelY + 48 * S, 'VOLUME', small, PALETTE.common);

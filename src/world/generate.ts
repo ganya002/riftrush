@@ -28,6 +28,8 @@ const MODIFIERS = [
   'darkness',
   'gold-rush',
   'everything-explodes',
+  'shrine',
+  'armory',
 ] as const;
 
 interface Node {

@@ -123,6 +123,7 @@ class Encounter {
   private readonly damage: number;
   private bodyOverlap: Phaser.Physics.Arcade.Collider | null = null;
   private bulletOverlap: Phaser.Physics.Arcade.Collider | null = null;
+  private wallHit: Phaser.Physics.Arcade.Collider | null = null;
   private disposed = false;
   private cleared = false;
   private pending = 0;
@@ -138,6 +139,7 @@ class Encounter {
     this.bounds = readBounds(hooks.scene);
     this.damage = offense(hooks.floor);
     this.group = hooks.scene.physics.add.group();
+    if (hooks.walls) this.wallHit = hooks.scene.physics.add.collider(this.group, hooks.walls);
     this.actx = {
       scene: hooks.scene,
       player: hooks.player,
@@ -193,8 +195,10 @@ class Encounter {
     if (scene.data?.get(SLOT)) scene.data.set(SLOT, null);
     this.bodyOverlap?.destroy();
     this.bulletOverlap?.destroy();
+    this.wallHit?.destroy();
     this.bodyOverlap = null;
     this.bulletOverlap = null;
+    this.wallHit = null;
     for (const timer of this.timers) timer.remove(false);
     this.timers.length = 0;
     for (const obj of this.owned) {
@@ -252,6 +256,7 @@ class Encounter {
       foe.telling = false;
       if (foe.boss) stepBoss(this.actx, foe);
       else stepFoe(this.actx, foe);
+      this.pose(foe);
     }
     if (this.disposed) return;
 
@@ -292,6 +297,14 @@ class Encounter {
     }
   }
 
+  private pose(foe: Foe): void {
+    const telling = foe.telling || foe.state === 'arrive' || foe.state === 'phase';
+    const key = telling ? `${textureKey(foe.kind)}-tell` : `${textureKey(foe.kind)}-idle`;
+    const anims = foe.sprite.anims;
+    if (!anims || !foe.sprite.scene?.anims.exists(key)) return;
+    anims.play(key, true);
+  }
+
   private spawnBoss(): void {
     const which = bossFor(this.hooks.floor);
     const center = clampIn(
@@ -319,6 +332,7 @@ class Encounter {
       y,
       elite: null,
       boss: which,
+      scaleMul: 2,
     });
   }
 

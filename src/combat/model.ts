@@ -65,19 +65,19 @@ export function offense(floor: number): number {
   return 1 + Math.floor((f - 1) / 5);
 }
 
-/** About +12% HP per floor, rounded. Floor 1 uses the base value. */
+/** About +8% HP per floor, so a boss chapter climbs instead of jumping. */
 export function vitality(base: number, floor: number): number {
   const f = Math.max(1, Math.floor(floor));
-  return Math.max(1, Math.round(base * (1 + (f - 1) * 0.12)));
+  return Math.max(1, Math.round(base * (1 + (f - 1) * 0.08)));
 }
 
 /**
- * +1 body every 3 floors.
+ * +1 body every 4 floors.
  * Combat rooms cap at 6. Elite rooms cap at 4 before a mirror copy.
  */
 export function waveCount(floor: number, elite: boolean): number {
   const f = Math.max(1, Math.floor(floor));
-  const grown = 2 + Math.floor((f - 1) / 3);
+  const grown = 2 + Math.floor((f - 1) / 4);
   return Math.min(elite ? 4 : 6, grown);
 }
 

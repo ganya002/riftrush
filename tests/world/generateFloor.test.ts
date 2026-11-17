@@ -9,6 +9,8 @@ const MODIFIERS = [
   'darkness',
   'gold-rush',
   'everything-explodes',
+  'shrine',
+  'armory',
 ] as const;
 
 const OPPOSITE: Record<DoorDir, DoorDir> = { n: 's', s: 'n', e: 'w', w: 'e' };
