@@ -5,7 +5,6 @@ import type { Biome, BossId, EliteMod, EnemyKind, Ink, RoomKind } from './model'
 export type { Biome, BossId, EliteMod, EnemyKind, RoomKind };
 
 export const DataKey = {
-  hurt: 'hurt',
   hp: 'hp',
   maxHp: 'maxHp',
   kind: 'kind',
@@ -21,13 +20,13 @@ export const DataKey = {
   life: 'life',
 } as const;
 
-export type HurtEnemy = (amount: number, fromX?: number, fromY?: number) => void;
-
 /**
  * Host integration for one room.
- * Damage enemies with `sprite.getData('hurt')(amount, fromX, fromY)`.
- * `hp`, `maxHp`, `kind`, `elite`, `phase`, and `facing` stay on sprite data.
+ * `damagePlayer` is the only way an encounter hurts the player.
+ * Contact overlaps and enemy bullets call it directly.
+ * `hp`, `maxHp`, `kind`, `elite`, `phase`, and `facing` stay on enemy sprite data.
  * Shielded enemies ignore a hit when the source point lies in the front arc.
+ * Lower an enemy's `hp` data to damage it.
  */
 export interface CombatHooks {
   scene: Phaser.Scene;

@@ -16,7 +16,7 @@ import {
 import { openingState } from './motion';
 import { makeRng } from './rng';
 import { ensureCombatTextures, TEX } from './textures';
-import { DataKey, type Actx, type CombatHooks, type FireOpts, type Foe, type FoeKind, type HurtEnemy } from './types';
+import { DataKey, type Actx, type CombatHooks, type FireOpts, type Foe, type FoeKind } from './types';
 
 const SLOT = 'riftrushEncounterShutdown';
 const BULLET_CAP = 260;
@@ -106,6 +106,7 @@ class Encounter {
   private readonly foes: Foe[] = [];
   private readonly bySprite = new WeakMap<Phaser.Physics.Arcade.Sprite, Foe>();
   private readonly bullets = new Set<Phaser.Physics.Arcade.Sprite>();
+  private readonly bulletDamage = new WeakMap<Phaser.Physics.Arcade.Sprite, number>();
   private readonly owned: Phaser.GameObjects.GameObject[] = [];
   private readonly timers: Phaser.Time.TimerEvent[] = [];
   private readonly group: Phaser.Physics.Arcade.Group;
@@ -386,10 +387,7 @@ class Encounter {
     sprite.setCollideWorldBounds(true);
     const radius = Math.max(4, sprite.width * 0.4);
     body.setCircle(radius, sprite.width / 2 - radius, sprite.height / 2 - radius);
-    const hurt: HurtEnemy = (amount, fromX, fromY) => this.hurt(foe, amount, fromX, fromY);
-    sprite.setData(DataKey.hurt, hurt);
     sprite.setData(DataKey.enemy, true);
-    sprite.on('hurt', hurt);
     this.bySprite.set(sprite, foe);
     this.sync(foe);
     this.foes.push(foe);
@@ -657,6 +655,7 @@ class Encounter {
     bullet.setData(DataKey.bullet, true);
     bullet.setData(DataKey.owned, true);
     bullet.setData(DataKey.damage, opts.damage);
+    this.bulletDamage.set(bullet, opts.damage);
     bullet.setData(DataKey.ownerId, opts.ownerId);
     bullet.setData(DataKey.born, this.hooks.scene.time.now);
     bullet.setData(DataKey.life, opts.life ?? 4200);
@@ -712,36 +711,46 @@ class Encounter {
     }
   }
 
+  /** Contact and enemy bullets hurt the player only through this hook. */
+  private hurtPlayer(amount: number, fromX: number, fromY: number): void {
+    if (this.disposed) return;
+    const dealt = Math.max(1, Math.round(amount));
+    this.hooks.damagePlayer(dealt, fromX, fromY);
+  }
+
   private onBody: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback = (left, right) => {
     if (this.disposed) return;
-    const foe = this.foeFrom(left) ?? this.foeFrom(right);
-    if (!foe?.alive) return;
+    const sprite = this.enemySprite(left) ?? this.enemySprite(right);
+    if (!sprite?.active) return;
+    const foe = this.bySprite.get(sprite);
+    if (foe && !foe.alive) return;
     const now = this.hooks.scene.time.now;
-    if (now < foe.touchAt) return;
-    foe.touchAt = now + 460;
-    this.hooks.damagePlayer(foe.touch, foe.sprite.x, foe.sprite.y);
+    if (foe && now < foe.touchAt) return;
+    if (foe) foe.touchAt = now + 460;
+    this.hurtPlayer(foe?.touch ?? this.damage, sprite.x, sprite.y);
   };
 
   private onBullet: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback = (left, right) => {
     if (this.disposed) return;
-    const bullet = this.bulletFrom(left) ?? this.bulletFrom(right);
-    if (!bullet?.active || !bullet.getData(DataKey.bullet)) return;
-    const amount = Number(bullet.getData(DataKey.damage)) || this.damage;
+    const bullet = this.projectile(left) ?? this.projectile(right);
+    if (!bullet?.active) return;
+    const amount = this.bulletDamage.get(bullet) ?? this.damage;
     const x = bullet.x;
     const y = bullet.y;
     this.retire(bullet);
-    this.hooks.damagePlayer(amount, x, y);
+    this.hurtPlayer(amount, x, y);
   };
 
-  private foeFrom(obj: unknown): Foe | null {
+  private enemySprite(obj: unknown): Phaser.Physics.Arcade.Sprite | null {
     const sprite = spriteOf(obj);
-    if (!sprite) return null;
-    return this.bySprite.get(sprite) ?? null;
+    if (!sprite || sprite === this.hooks.player) return null;
+    if (this.bySprite.has(sprite)) return sprite;
+    return null;
   }
 
-  private bulletFrom(obj: unknown): Phaser.Physics.Arcade.Sprite | null {
+  private projectile(obj: unknown): Phaser.Physics.Arcade.Sprite | null {
     const sprite = spriteOf(obj);
-    if (!sprite?.getData(DataKey.bullet)) return null;
+    if (!sprite || sprite === this.hooks.player) return null;
     return sprite;
   }
 
