@@ -83,7 +83,7 @@ function addAnim(
  * Build every texture and animation. Safe to call more than once:
  * existing texture and animation keys are left in place.
  *
- * Player sheet `player` (16×16, 16 frames):
+ * Player sheet `player` (32×32, 16 frames):
  *   player-idle 0–3, player-run 4–7, player-dash 8–11, player-hit 12–15.
  *   `player` is an idle alias.
  * Enemy sheets play `<key>-idle` (and `<key>` as the same loop).

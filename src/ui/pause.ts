@@ -195,9 +195,8 @@ export function mountPause(scene: Phaser.Scene, opts: PauseOptions): Phaser.Game
   const applyPointer = (pointer: Phaser.Input.Pointer) => {
     if (!bar) return;
     const camera = scene.cameras.main;
-    const zoom = camera.zoom || 1;
-    const left = camera.x + bar.x * zoom;
-    const width = bar.w * zoom;
+    const left = camera.x + bar.x;
+    const width = bar.w;
     const volume = width <= 0 ? 0 : (pointer.x - left) / width;
     commit({ ...current, volume }, false);
   };

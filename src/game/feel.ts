@@ -123,15 +123,36 @@ export function afterimage(
   scene: Phaser.Scene,
   sprite: Phaser.GameObjects.Sprite,
   tint: number,
+  ox = 0,
+  oy = 0,
 ): void {
   if (!sprite.texture) return;
   const img = scene.add
-    .image(sprite.x, sprite.y, sprite.texture.key, sprite.frame.name)
+    .image(sprite.x + ox, sprite.y + oy, sprite.texture.key, sprite.frame.name)
     .setFlipX(sprite.flipX)
     .setTint(tint)
-    .setAlpha(0.7)
-    .setDepth(sprite.depth - 1);
-  motes.push({ img, vx: 0, vy: 0, life: 0.16, max: 0.16, grow: 0 });
+    .setAlpha(0.4)
+    .setDepth(sprite.depth - 2);
+  motes.push({ img, vx: 0, vy: 0, life: 0.14, max: 0.14, grow: 0 });
+}
+
+/** A small mote behind the body. Full-size glows hide the 32px runner. */
+export function puff(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  tint: number,
+  count = 1,
+  speed = 20,
+): void {
+  const key = juiceKey(scene, ['glow-cyan', 'glow']);
+  if (!key) return;
+  for (let i = 0; i < count; i += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const vel = speed * (0.4 + Math.random() * 0.6);
+    const img = mote(scene, x, y, key, tint, 0.16, Math.cos(angle) * vel, Math.sin(angle) * vel, 6);
+    img?.setScale(0.18);
+  }
 }
 
 export function muzzle(

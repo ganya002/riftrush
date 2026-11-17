@@ -7,6 +7,7 @@ import {
   floatText,
   gameplayScale,
   muzzle,
+  puff,
   resetFeel,
   setScreenshake,
   shockwave,
@@ -14,25 +15,29 @@ import {
   triggerShake,
   updateFeel,
 } from './feel';
+import { roomZoom } from './view';
 import {
+  ActiveEffect,
   DataKey,
   EVENT_DETAILS,
   EVENT_IDS,
+  RELICS,
   addShards,
   applySynergies,
   blitRoom,
   bootArt,
   bootAudio,
+  bossFor,
   eventPayload,
   generateFloor,
   getCharacter,
   getPerk,
+  heartsAfterCurse,
   loadSave,
   loadSettings,
   mountHud,
   mountPause,
   music,
-  RELICS,
   rollDrop,
   rollRoomEvent,
   setMuted,
@@ -76,6 +81,20 @@ interface Keys {
   shift: Phaser.Input.Keyboard.Key;
   e: Phaser.Input.Keyboard.Key;
   q: Phaser.Input.Keyboard.Key;
+  f: Phaser.Input.Keyboard.Key;
+}
+
+interface PadRead {
+  x: number;
+  y: number;
+  aimX: number;
+  aimY: number;
+  aiming: boolean;
+  shoot: boolean;
+  dash: boolean;
+  interact: boolean;
+  primary: boolean;
+  secondary: boolean;
 }
 
 interface Interact {
@@ -146,6 +165,7 @@ export class RunScene extends Phaser.Scene {
   private weaponBase: Weapon = startingWeapon('vesper');
   private relics: Relic[] = [];
   private active: Relic = relicById('ember-chip');
+  private secondary: Relic = relicById('mercury-tread');
   private gun: Weapon = startingWeapon('vesper');
   private unlocked: string[] = ['pistol'];
   private keys!: Keys;
@@ -194,6 +214,14 @@ export class RunScene extends Phaser.Scene {
   private invuln = 0;
   private doorLockout = 0;
   private activeCd = 0;
+  private secondaryCd = 0;
+  private uiCam: Phaser.Cameras.Scene2D.Camera | null = null;
+  private bossHold = 0;
+  private hitAnim = 0;
+  private pad: PadRead = emptyPad();
+  private padWas = { dash: false, interact: false, primary: false, secondary: false };
+  private pointerX = -1;
+  private pointerY = -1;
   private overdrive = 0;
   private floorPayload: EventPayload | null = null;
   private invertLeft = 0;
@@ -236,7 +264,9 @@ export class RunScene extends Phaser.Scene {
     this.weaponBase = startingWeapon(this.characterId);
     this.relics = [];
     this.active = relicById('ember-chip');
+    this.secondary = relicById('mercury-tread');
     this.activeCd = 0;
+    this.secondaryCd = 0;
     this.recompute();
     this.hp = this.maxHp;
     this.gold = 0;
@@ -261,26 +291,45 @@ export class RunScene extends Phaser.Scene {
       shift: 'SHIFT',
       e: 'E',
       q: 'Q',
+      f: 'F',
     }) as Keys;
     this.walls = this.physics.add.staticGroup();
     this.playerBullets = this.physics.add.group({ maxSize: 80, allowGravity: false });
     this.enemyBullets = this.physics.add.group({ maxSize: 260, allowGravity: false });
     this.player = this.physics.add.sprite(160, 90, 'player', 0);
-    this.player.setDepth(12);
+    this.player.setDepth(14);
     const body = this.player.body as Phaser.Physics.Arcade.Body;
-    body.setSize(10, 10, true);
+    body.setSize(12, 14, true);
     body.setCollideWorldBounds(false);
     if (this.anims.exists('player-idle')) this.player.anims.play('player-idle');
     this.cross = this.add
       .image(0, 0, this.textures.exists('glow-cyan') ? 'glow-cyan' : 'glow')
       .setDepth(80)
-      .setScale(0.45);
+      .setScale(0.2);
     this.flash = this.add
-      .rectangle(240, 135, 480, 270, 0xff2e63, 0)
+      .rectangle(
+        this.scale.width / 2,
+        this.scale.height / 2,
+        this.scale.width,
+        this.scale.height,
+        0xff2e63,
+        0,
+      )
       .setScrollFactor(0)
-      .setDepth(90);
+      .setDepth(90)
+      .setName('riftrush-flash');
     this.prompt = new PixText(this, 0, 0).setDepth(70);
-    this.toastText = new PixText(this, 160, 28).setScrollFactor(0).setDepth(1600).setOrigin(0.5, 0);
+    this.toastText = new PixText(this, this.scale.width / 2, 28)
+      .setScrollFactor(0)
+      .setDepth(1600)
+      .setOrigin(0.5, 0)
+      .setName('riftrush-toast');
+    this.uiCam = this.cameras.add(0, 0, this.scale.width, this.scale.height);
+    this.uiCam.setZoom(1);
+    this.uiCam.setScroll(0, 0);
+    this.uiCam.roundPixels = true;
+    this.uiCam.transparent = true;
+    this.scale.on('resize', this.onResize, this);
     this.toastText.setVisible(false);
     this.physics.add.collider(this.player, this.walls);
     this.physics.add.collider(this.playerBullets, this.walls, (obj) => {
@@ -303,6 +352,7 @@ export class RunScene extends Phaser.Scene {
   }
 
   shutdown(): void {
+    this.scale.off('resize', this.onResize, this);
     this.encounter?.shutdown();
     this.encounter = null;
     resetFeel();
@@ -338,8 +388,10 @@ export class RunScene extends Phaser.Scene {
       this.enterRoom(door.targetId, OPP[door.dir]);
       return;
     }
+    this.syncCameras();
     this.tick(raw);
     updateFeel(raw);
+    this.syncCameras();
   }
 
   private menuOpen(): boolean {
@@ -352,6 +404,14 @@ export class RunScene extends Phaser.Scene {
     this.fireCd = Math.max(0, this.fireCd - dt);
     this.dashCd = Math.max(0, this.dashCd - dt);
     this.activeCd = Math.max(0, this.activeCd - dt);
+    this.secondaryCd = Math.max(0, this.secondaryCd - dt);
+    this.hitAnim = Math.max(0, this.hitAnim - dt);
+    this.pad = this.readPad();
+    if (this.bossHold > 0) {
+      this.bossHold = Math.max(0, this.bossHold - dt);
+      if (this.bossHold === 0 && this.room?.kind === 'boss' && this.sealed)
+        this.beginEncounter(true);
+    }
     this.overdrive = Math.max(0, this.overdrive - dt);
     this.invuln = Math.max(0, this.invuln - dt);
     this.dashing = Math.max(0, this.dashing - dt);
@@ -363,8 +423,21 @@ export class RunScene extends Phaser.Scene {
     this.move(dt);
     if (this.dashBuffer > 0 && this.dashCd <= 0 && this.dashing <= 0) this.startDash();
     this.shoot();
-    if (Phaser.Input.Keyboard.JustDown(this.keys.e)) this.interact();
-    if (Phaser.Input.Keyboard.JustDown(this.keys.q)) this.useActive();
+    if (
+      Phaser.Input.Keyboard.JustDown(this.keys.e) ||
+      this.padEdge('interact', this.pad.interact)
+    ) {
+      this.interact();
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.q) || this.padEdge('primary', this.pad.primary)) {
+      this.useActive(0);
+    }
+    if (
+      Phaser.Input.Keyboard.JustDown(this.keys.f) ||
+      this.padEdge('secondary', this.pad.secondary)
+    ) {
+      this.useActive(1);
+    }
     this.dress(dt);
     this.updateBullets(dt);
     this.hurtEnemies();
@@ -376,7 +449,7 @@ export class RunScene extends Phaser.Scene {
 
   private recompute(): void {
     this.gun = applySynergies({ ...this.weaponBase }, this.relics);
-    this.maxHp = Math.max(1, Math.round(this.baseHearts + this.gun.hpDelta));
+    this.maxHp = heartsAfterCurse(this.baseHearts, this.gun.hpDelta);
     this.hp = Math.min(this.hp, this.maxHp);
   }
 
@@ -414,18 +487,8 @@ export class RunScene extends Phaser.Scene {
     this.sealed = fight;
     this.rebuildTiles(!fight);
     this.furnish(room);
-    const width = room.width * TILE;
-    const height = room.height * TILE;
-    const padX = Math.max(0, Math.floor((this.scale.width - width) / 2));
-    const padY = Math.max(0, Math.floor((this.scale.height - height) / 2));
-    this.physics.world.setBounds(this.origin.x, this.origin.y, width, height);
-    this.cameras.main.setBounds(
-      this.origin.x - padX,
-      this.origin.y - padY,
-      width + padX * 2,
-      height + padY * 2,
-    );
-    this.cameras.main.startFollow(this.player, true, 0.22, 0.22);
+    this.frameRoom();
+    this.cameras.main.startFollow(this.player, true, 1, 1);
     const spawn = this.spawnPoint(arrival);
     this.player.setPosition(spawn.x, spawn.y);
     this.player.setVelocity(0, 0);
@@ -436,7 +499,26 @@ export class RunScene extends Phaser.Scene {
     this.doorLockout = arrival ? 0.4 : 0;
     if (this.roomFx.invert > this.invertLeft) this.invertLeft = this.roomFx.invert;
     if (this.roomFx.meteors > this.meteorLeft) this.meteorLeft = this.roomFx.meteors;
+    this.bossHold = 0;
+    if (room.kind === 'boss' && fight) {
+      this.bossHold = 0.9;
+      music('boss');
+      sfx('boss');
+      this.toast(bossFor(this.floorNum) === 'A' ? 'RIFT MONARCH' : 'COLOSSUS');
+    } else {
+      this.beginEncounter(fight);
+      if (fight) music('combat');
+      else music('hub');
+    }
+    if (arrival) sfx('ui');
+    this.maybePortal(false);
+    this.syncCameras();
+  }
+
+  private beginEncounter(fight: boolean): void {
+    const room = this.room;
     const hookKind: RoomKind = fight ? room.kind : room.kind === 'event' ? 'event' : 'start';
+    this.encounter?.shutdown();
     this.encounter = startEncounter({
       scene: this,
       player: this.player,
@@ -449,13 +531,90 @@ export class RunScene extends Phaser.Scene {
       damagePlayer: (amount, fromX, fromY) => this.damagePlayer(amount, fromX, fromY),
     });
     if (hookKind === 'event') this.openDoors();
-    if (room.kind === 'boss' && fight) {
-      music('boss');
-      sfx('boss');
-    } else if (fight) music('combat');
-    else music('hub');
-    if (arrival) sfx('ui');
-    this.maybePortal(false);
+    this.syncCameras();
+  }
+
+  private frameRoom(): void {
+    const roomW = this.room.width * TILE;
+    const roomH = this.room.height * TILE;
+    const viewW = Math.max(1, this.scale.width);
+    const viewH = Math.max(1, this.scale.height);
+    const cam = this.cameras.main;
+    cam.setSize(viewW, viewH);
+    cam.setZoom(roomZoom(viewW, viewH, roomW, roomH));
+    cam.roundPixels = true;
+    cam.setBounds(this.origin.x, this.origin.y, roomW, roomH);
+    this.physics.world.setBounds(this.origin.x, this.origin.y, roomW, roomH);
+    this.uiCam?.setSize(viewW, viewH);
+    this.uiCam?.setPosition(0, 0);
+    this.uiCam?.setScroll(0, 0);
+    this.flash.setPosition(viewW / 2, viewH / 2).setSize(viewW, viewH);
+    this.toastText.setPosition(viewW / 2, 28);
+  }
+
+  private onResize = (): void => {
+    if (!this.room) return;
+    this.frameRoom();
+  };
+
+  private syncCameras(): void {
+    const ui = this.uiCam;
+    if (!ui) return;
+    ui.setScroll(0, 0);
+    const uiBit = ui.id;
+    const worldBit = this.cameras.main.id;
+    for (const child of this.children.list) {
+      const name = child.name;
+      const pinned =
+        name === 'riftrush-hud' ||
+        name === 'riftrush-pause' ||
+        name === 'riftrush-toast' ||
+        name === 'riftrush-flash';
+      if (pinned) {
+        child.cameraFilter |= worldBit;
+        child.cameraFilter &= ~uiBit;
+      } else {
+        child.cameraFilter |= uiBit;
+        child.cameraFilter &= ~worldBit;
+      }
+    }
+  }
+
+  private readPad(): PadRead {
+    const pads = this.input.gamepad?.gamepads ?? [];
+    const pad = pads.find((entry) => entry);
+    if (!pad) return emptyPad();
+    const dead = 0.32;
+    const axis = (value: number) => (Math.abs(value) < dead ? 0 : value);
+    let x = axis(pad.leftStick.x);
+    let y = axis(pad.leftStick.y);
+    const down = (index: number) => Boolean(pad.buttons[index]?.pressed);
+    if (down(14)) x -= 1;
+    if (down(15)) x += 1;
+    if (down(12)) y -= 1;
+    if (down(13)) y += 1;
+    const aimX = axis(pad.rightStick.x);
+    const aimY = axis(pad.rightStick.y);
+    const trigger = (index: number) => (pad.buttons[index]?.value ?? 0) > 0.4 || down(index);
+    const mag = Math.hypot(x, y);
+    return {
+      x: mag > 1 ? x / mag : x,
+      y: mag > 1 ? y / mag : y,
+      aimX,
+      aimY,
+      aiming: aimX !== 0 || aimY !== 0,
+      shoot: trigger(7) || down(5),
+      dash: trigger(6) || down(4) || down(1),
+      interact: down(0),
+      primary: down(3),
+      secondary: down(2),
+    };
+  }
+
+  private padEdge(key: 'dash' | 'interact' | 'primary' | 'secondary', down: boolean): boolean {
+    const was = this.padWas[key];
+    this.padWas[key] = down;
+    return down && !was;
   }
 
   private wipeRoom(): void {
@@ -841,6 +1000,7 @@ export class RunScene extends Phaser.Scene {
       this.fireCd = 0;
       this.toast(drop.weapon.name.toUpperCase());
     } else {
+      if (this.active.id !== drop.relic.id) this.secondary = this.active;
       this.relics = [...this.relics, drop.relic];
       this.active = drop.relic;
       this.activeCd = 0.35;
@@ -959,6 +1119,8 @@ export class RunScene extends Phaser.Scene {
     if (this.keys.right.isDown || this.keys.d.isDown) ix += 1;
     if (this.keys.up.isDown || this.keys.w.isDown) iy -= 1;
     if (this.keys.down.isDown || this.keys.s.isDown) iy += 1;
+    ix += this.pad.x;
+    iy += this.pad.y;
     if (this.invertLeft > 0) {
       ix = -ix;
       iy = -iy;
@@ -970,7 +1132,8 @@ export class RunScene extends Phaser.Scene {
     }
     if (
       Phaser.Input.Keyboard.JustDown(this.keys.space) ||
-      Phaser.Input.Keyboard.JustDown(this.keys.shift)
+      Phaser.Input.Keyboard.JustDown(this.keys.shift) ||
+      this.padEdge('dash', this.pad.dash)
     ) {
       this.dashBuffer = 0.14;
     }
@@ -981,7 +1144,7 @@ export class RunScene extends Phaser.Scene {
       this.dashTick -= dt;
       if (this.dashTick <= 0) {
         this.dashTick = 0.03;
-        afterimage(this, this.player, 0x00f5d4);
+        afterimage(this, this.player, 0x00f5d4, -this.dashX * 14, -this.dashY * 14);
       }
       return;
     }
@@ -1013,6 +1176,8 @@ export class RunScene extends Phaser.Scene {
     if (this.keys.right.isDown || this.keys.d.isDown) x += 1;
     if (this.keys.up.isDown || this.keys.w.isDown) y -= 1;
     if (this.keys.down.isDown || this.keys.s.isDown) y += 1;
+    x += this.pad.x;
+    y += this.pad.y;
     if (this.invertLeft > 0) {
       x = -x;
       y = -y;
@@ -1030,12 +1195,13 @@ export class RunScene extends Phaser.Scene {
     this.dashTick = 0;
     this.dashBuffer = 0;
     sfx('dash');
-    burst(this, this.player.x, this.player.y, 0x00f5d4, 6, 36);
+    puff(this, this.player.x - this.dashX * 16, this.player.y - this.dashY * 16, 0x00f5d4, 3, 24);
     triggerShake(this.cameras.main, 0.002, 50);
   }
 
   private shoot(): void {
-    if (!this.input.activePointer.leftButtonDown() || this.fireCd > 0) return;
+    const firing = this.input.activePointer.leftButtonDown() || this.pad.shoot;
+    if (!firing || this.fireCd > 0) return;
     const haste = this.overdrive > 0 ? 0.45 : 1;
     this.fireCd = Math.max(0.045, (this.gun.cooldownMs / 1000) * haste);
     const damage = this.gun.damage * this.fury;
@@ -1220,31 +1386,58 @@ export class RunScene extends Phaser.Scene {
 
   private aimPointer(): void {
     const pointer = this.input.activePointer;
-    const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    const dx = world.x - this.player.x;
-    const dy = world.y - this.player.y;
-    if (dx * dx + dy * dy > 16) this.aim = Math.atan2(dy, dx);
-    this.cross.setPosition(world.x, world.y);
-    this.cameras.main.setFollowOffset(
-      Phaser.Math.Clamp(-dx * 0.06, -14, 14),
-      Phaser.Math.Clamp(-dy * 0.06, -10, 10),
+    const mouseMoved = pointer.x !== this.pointerX || pointer.y !== this.pointerY;
+    this.pointerX = pointer.x;
+    this.pointerY = pointer.y;
+    if (this.pad.aiming) {
+      this.aim = Math.atan2(this.pad.aimY, this.pad.aimX);
+    } else if (mouseMoved) {
+      const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+      const dx = world.x - this.player.x;
+      const dy = world.y - this.player.y;
+      if (dx * dx + dy * dy > 16) this.aim = Math.atan2(dy, dx);
+    } else if (this.pad.x !== 0 || this.pad.y !== 0) {
+      this.aim = Math.atan2(this.pad.y, this.pad.x);
+    }
+    const reach = 28;
+    this.cross.setPosition(
+      this.player.x + Math.cos(this.aim) * reach,
+      this.player.y + Math.sin(this.aim) * reach,
     );
+    this.cameras.main.setFollowOffset(0, 0);
   }
 
   private dress(dt: number): void {
     const moving = Math.hypot(this.vx, this.vy) > 8;
-    const anim = this.dashing > 0 ? 'player-dash' : moving ? 'player-run' : 'player-idle';
+    this.player.setRotation(0);
+    this.player.setFlipX(Math.cos(this.aim) < 0);
+    const anim =
+      this.hitAnim > 0
+        ? 'player-hit'
+        : this.dashing > 0
+          ? 'player-dash'
+          : moving
+            ? 'player-run'
+            : 'player-idle';
     if (this.anims.exists(anim)) this.player.anims.play(anim, true);
-    this.player.setRotation(this.aim);
     this.player.setAlpha(
       this.invuln > 0 && this.dashing <= 0 && Math.sin(this.time.now / 40) > 0 ? 0.35 : 1,
     );
     if (
       moving &&
       this.dashing <= 0 &&
-      Math.floor(this.time.now / 80) !== Math.floor((this.time.now - dt * 1000) / 80)
+      this.hitAnim <= 0 &&
+      Math.floor(this.time.now / 90) !== Math.floor((this.time.now - dt * 1000) / 90)
     ) {
-      burst(this, this.player.x, this.player.y, 0x6b5b86, 1, 12);
+      const back = Math.atan2(this.vy, this.vx) + Math.PI;
+      puff(
+        this,
+        this.player.x + Math.cos(back) * 18,
+        this.player.y + Math.sin(back) * 16,
+        0x4cc9f0,
+        1,
+        16,
+      );
     }
   }
 
@@ -1281,90 +1474,89 @@ export class RunScene extends Phaser.Scene {
       .setVisible(true);
   }
 
-  private useActive(): void {
-    if (this.activeCd > 0 || this.dead) {
+  private useActive(slot: 0 | 1): void {
+    const relic = slot === 0 ? this.active : this.secondary;
+    const cooling = slot === 0 ? this.activeCd : this.secondaryCd;
+    if (cooling > 0 || this.dead) {
       sfx('ui');
       return;
     }
-    const relic = this.active;
-    this.activeCd = Math.max(0.4, relic.activeMs / 1000);
-    const power = Math.max(
-      4,
-      (relic.mods.damageAdd ?? 0) + this.gun.damage * (relic.mods.damageMult ?? 1),
-    );
-    switch (relic.id) {
-      case 'hair-trigger':
-        this.overdrive = 2.4;
+    if (!this.cast(relic.active, relic)) return;
+    const wait = Math.max(0.4, relic.activeMs / 1000);
+    if (slot === 0) this.activeCd = wait;
+    else this.secondaryCd = wait;
+    triggerHitstop(20);
+    this.toast(`${slot === 0 ? 'Q' : 'F'} ${relic.name.toUpperCase()}`);
+  }
+
+  /** Both active slots call this. It branches on the effect kind, never the relic id. */
+  private cast(effect: ActiveEffect, relic: Relic): boolean {
+    const power =
+      Math.max(4, (relic.mods.damageAdd ?? 0) + this.gun.damage * (relic.mods.damageMult ?? 1)) *
+      (effect.power ?? 1);
+    switch (effect.kind) {
+      case 'overdrive':
+        this.overdrive = effect.seconds ?? 2.4;
         sfx('ui');
-        break;
-      case 'mercury-tread':
+        return true;
+      case 'dash':
         this.dashCd = 0;
         this.dashing = 0;
         this.startDash();
-        break;
-      case 'buckshot-band':
-      case 'wide-bore':
-        this.cone(4 + (relic.mods.pelletsAdd ?? 1), 0.35 + (relic.mods.spreadAdd ?? 0.1), power);
+        return true;
+      case 'cone':
+        this.cone(effect.count ?? 4, effect.spread ?? 0.4, power);
         sfx('shoot');
-        break;
-      case 'rubber-seal':
-      case 'void-battery':
-        this.spawnBullet(this.aim, power, { bounce: 2 + (relic.mods.bounceAdd ?? 0), speed: 280 });
-        sfx('shoot');
-        break;
-      case 'ion-needle':
-      case 'rift-crown':
-        this.fireBeam(this.aim, power);
-        sfx('shoot');
-        break;
-      case 'forked-tongue':
-        this.spawnBullet(this.aim, power);
-        this.spawnBullet(this.aim + 0.35, power * 0.8);
-        this.spawnBullet(this.aim - 0.35, power * 0.8);
-        sfx('shoot');
-        break;
-      case 'leaden-soul':
-        this.spawnBullet(this.aim, power + (relic.mods.damageAdd ?? 0), {
-          pierce: 2 + (relic.mods.pierceAdd ?? 0),
-          speed: 180,
+        return true;
+      case 'bounce':
+        this.spawnBullet(this.aim, power, {
+          bounce: effect.bounce ?? 2,
+          speed: effect.speed ?? 280,
         });
         sfx('shoot');
-        break;
-      case 'storm-lattice':
-        this.blast(this.player.x, this.player.y, 90, power);
+        return true;
+      case 'beam':
+        this.fireBeam(this.aim, power);
+        sfx('shoot');
+        return true;
+      case 'fork':
+        this.spawnBullet(this.aim, power);
+        this.spawnBullet(this.aim + (effect.spread ?? 0.35), power * 0.8);
+        this.spawnBullet(this.aim - (effect.spread ?? 0.35), power * 0.8);
+        sfx('shoot');
+        return true;
+      case 'heavy':
+        this.spawnBullet(this.aim, power, {
+          pierce: effect.pierce ?? 2,
+          speed: effect.speed ?? 180,
+        });
+        sfx('shoot');
+        return true;
+      case 'blast':
+        this.blast(this.player.x, this.player.y, effect.radius ?? 90, power);
         shockwave(this, this.player.x, this.player.y, 0x4cc9f0);
         sfx('explode');
-        break;
-      case 'cursed-glass':
-        if (this.hp > 1) this.hp -= 1;
-        this.blast(this.player.x, this.player.y, 64, power);
-        shockwave(this, this.player.x, this.player.y, 0xff2e63);
-        sfx('hurt');
-        break;
-      case 'blood-pact':
-        if (this.hp <= 1) {
-          this.activeCd = 0;
+        return true;
+      case 'sacrifice': {
+        const cost = effect.hpCost ?? 1;
+        if (this.hp <= cost) {
           sfx('ui');
           this.toast('TOO WEAK');
-          return;
+          return false;
         }
-        this.hp -= 1;
-        this.blast(this.player.x, this.player.y, 56, power * 1.4);
-        shockwave(this, this.player.x, this.player.y, 0xe63946);
+        this.hp -= cost;
+        this.blast(this.player.x, this.player.y, effect.radius ?? 64, power);
+        shockwave(this, this.player.x, this.player.y, 0xff2e63);
         sfx('hurt');
-        break;
-      case 'pyre-heart':
-        this.nova(10, power);
-        shockwave(this, this.player.x, this.player.y, 0xff6b35);
-        sfx('explode');
-        break;
-      default:
-        this.nova(8, Math.max(4, relic.mods.damageAdd ?? power * 0.6));
+        return true;
+      }
+      case 'nova':
+        this.nova(effect.count ?? 8, power);
         sfx('shoot');
-        break;
+        return true;
+      default:
+        return false;
     }
-    triggerHitstop(20);
-    this.toast(`Q ${relic.name.toUpperCase()}`);
   }
 
   private nova(count: number, damage: number): void {
@@ -1394,6 +1586,7 @@ export class RunScene extends Phaser.Scene {
     damageNumber(this, this.player.x, this.player.y - 12, dealt, 0xe63946);
     this.flash.setAlpha(0.4);
     sfx('hurt');
+    this.hitAnim = 0.22;
     if (this.anims.exists('player-hit')) this.player.anims.play('player-hit');
     if (this.thorns && Math.hypot(this.player.x - fromX, this.player.y - fromY) < 30) {
       this.blast(this.player.x, this.player.y, 26, 1);
@@ -1433,9 +1626,11 @@ export class RunScene extends Phaser.Scene {
       hp: Math.max(0, Math.ceil(this.hp)),
       maxHp: this.maxHp,
       weaponName: this.gun.name.toUpperCase(),
-      ammoLabel: `G${this.gold} Q ${this.active.name.toUpperCase()}`,
+      ammoLabel: `Q ${this.active.name.toUpperCase()}`,
+      secondaryLabel: `F ${this.secondary.name.toUpperCase()}`,
       dashReady: this.dashCd <= 0 && this.dashing <= 0,
       floor: this.floorNum,
+      gold: this.gold,
       shards: loadSave().shards,
       minimapRooms: (this.floor?.rooms ?? []).map((room) => ({
         x: room.gridX,
@@ -1543,4 +1738,19 @@ export class RunScene extends Phaser.Scene {
 
 function relicById(id: string): Relic {
   return RELICS.find((relic) => relic.id === id) ?? RELICS[0]!;
+}
+
+function emptyPad(): PadRead {
+  return {
+    x: 0,
+    y: 0,
+    aimX: 0,
+    aimY: 0,
+    aiming: false,
+    shoot: false,
+    dash: false,
+    interact: false,
+    primary: false,
+    secondary: false,
+  };
 }

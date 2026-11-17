@@ -19,7 +19,7 @@ import {
 
 /**
  * Actors face right. Silhouettes:
- * player — hood, visor slit, pistol
+ * player — 32px hood, cyan visor, gold pistol, white rim
  * chaser — low hound, snout and tail
  * shooter — tall helmet, rifle barrel
  * charger — wedge ram, horn forward
@@ -66,76 +66,44 @@ function shiftColor(src: Frame, color: number, dx: number, dy: number): Frame {
   return out;
 }
 
-const PLAYER = pix(`
-  ................
-  .....00000......
-  ....0uuuuu0.....
-  ....0u6h6u0.....
-  ....0ubbbu0.....
-  ....0u6h6u0.....
-  .....0uuu0......
-  ....00eee00.....
-  ...0eegggee0....
-  ...0eiiiiie00...
-  ..00ei0ii0ii0...
-  ..0.0e0000i0....
-  ....00....00....
-  ....0......0....
-  ....00....00....
-  ................
-`);
+/**
+ * 32×32 runner. Bone coat, cyan visor, gold gun, white rim.
+ * The rift floor is purple, so the body stays in the light end of the palette.
+ */
+function paintRunner(bob: number, leg: number, blink: boolean): Frame {
+  const frame = empty(32, 32);
+  fillRect(frame, 11, 22 + bob, 4, 6, 14);
+  fillRect(frame, 17 + leg, 22 + bob, 4, 6, 6);
+  fillRect(frame, 11, 27 + bob, 4, 2, 0);
+  fillRect(frame, 17 + leg, 27 + bob, 4, 2, 0);
+  fillRect(frame, 8, 13 + bob, 14, 11, 6);
+  fillRect(frame, 8, 21 + bob, 14, 3, 7);
+  fillEllipse(frame, 14, 11 + bob, 7, 6, 5);
+  fillRect(frame, 9, 11 + bob, 11, 3, blink ? 1 : 11);
+  if (!blink) fillRect(frame, 10, 11 + bob, 9, 1, 17);
+  fillRect(frame, 18, 16 + bob, 3, 4, 6);
+  fillRect(frame, 20, 17 + bob, 8, 3, 9);
+  fillRect(frame, 27, 16 + bob, 3, 2, 8);
+  return outline(frame, 17);
+}
 
 function playerFrames(): Frame[] {
-  const bob = [0, -1, 0, 1].map((dy) => shift(PLAYER, 0, dy));
-  const blink = clone(bob[2]);
-  // Visor closes for one idle frame.
-  for (let x = 5; x <= 9; x++) if (blink[5][x] !== 0 && blink[5][x] !== -1) blink[5][x] = 30;
-  const idle = [bob[0], bob[1], blink, bob[3]];
-
-  const legs = [
-    ['....00....0.....', '....0......00...', '....0........0..'],
-    ['.....00..00.....', '.....0....0.....', '.....00..00.....'],
-    ['....0....00.....', '...00......0....', '..0........0....'],
-    ['....000..000....', '....00....00....', '................'],
-  ];
-  const run = legs.map((rows, i) => {
-    const frame = shift(PLAYER, 0, i % 2 === 0 ? 0 : 1);
-    rows.forEach((row, ry) => {
-      const y = 12 + ry;
-      for (let x = 0; x < 16; x++) {
-        const ch = row[x];
-        frame[y][x] = ch === '.' ? -1 : Number.parseInt(ch, 32);
-      }
-    });
-    return frame;
-  });
-
+  const idle = [0, -1, 0, 1].map((bob, index) => paintRunner(bob, 0, index === 2));
+  const run = [0, 1, 2, 3].map((index) =>
+    paintRunner(index % 2 === 0 ? 0 : -1, index % 2 === 0 ? -3 : 3, false),
+  );
   const dash = [0, 1, 2, 1].map((lean) => {
-    const body = shear(PLAYER, lean);
-    const out = empty(16, 16);
-    stamp(out, ghost(shift(PLAYER, -3 - lean, 0)));
+    const body = shear(paintRunner(0, lean, false), lean);
+    const out = empty(32, 32);
+    stamp(out, ghost(shift(paintRunner(0, 0, false), -10 - lean, 1)));
     stamp(out, body);
     return out;
   });
-
   const hit = [0, 1, 2, 3].map((phase) => {
-    const knocked = shift(PLAYER, phase === 0 ? 0 : -1, phase === 3 ? 0 : 1);
-    if (phase === 0) {
-      return recolorWhere(knocked, (color) => (color === 0 ? 17 : 17));
-    }
-    const hurt = recolorWhere(knocked, (color) => {
-      if (color === 11 || color === 17) return 17;
-      if (color === 7 || color === 14 || color === 30) return 16;
-      return color;
-    });
-    if (phase === 1) {
-      plot(hurt, 2, 6, 17);
-      plot(hurt, 3, 4, 7);
-      plot(hurt, 1, 9, 16);
-    }
-    return hurt;
+    const knocked = shift(paintRunner(phase === 1 ? 1 : 0, 0, false), phase === 0 ? 0 : -1, 0);
+    if (phase % 2 === 0) return recolorWhere(knocked, () => 17);
+    return recolorWhere(knocked, (color) => (color === 11 || color === 17 ? 17 : 7));
   });
-
   return [...idle, ...run, ...dash, ...hit];
 }
 

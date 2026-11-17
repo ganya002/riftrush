@@ -32,7 +32,7 @@ export function stepIntro(room: Actx, foe: Foe): void {
   halt(foe);
   face(foe, aimAt(foe, room.player.x, room.player.y));
   foe.telling = true;
-  if (foe.t >= (foe.boss ? 560 : 460)) enter(foe, foe.next);
+  if (foe.t >= (foe.boss ? 1100 : 460)) enter(foe, foe.next);
 }
 
 function stepChaser(room: Actx, foe: Foe): void {
