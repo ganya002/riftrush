@@ -27,6 +27,13 @@ export interface HudState {
 
 const HUD_NAME = 'riftrush-hud';
 
+/** Screen strip reserved for gold, shards, and hearts. The world camera starts below it. */
+export function hudTop(scene: Phaser.Scene): number {
+  const scale = hudScale(scene);
+  const line = textHeight(scale * 2);
+  return 4 * scale + line + 12 * scale;
+}
+
 const HEART = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
 
 const ROOM_COLOR: Record<string, number> = {
@@ -116,8 +123,11 @@ function paintHud(
   const height = Math.max(1, Math.floor(scene.scale.height));
   const scale = hudScale(scene);
   const pad = 8 * scale;
+  const top = hudTop(scene);
   plate.clear();
   map.clear();
+  plate.fillStyle(PALETTE.void, 1);
+  plate.fillRect(0, 0, width, top);
 
   const maxHp = Math.max(0, Math.round(state.maxHp));
   const hp = Math.min(maxHp, Math.max(0, state.hp));
@@ -152,27 +162,24 @@ function paintHud(
 
   const line = Math.max(text.gold.height, textHeight(scale * 2));
   const chipH = line + 8 * scale;
-  const shardChipW = 10 * scale + text.shards.width + 8 * scale;
+  const chipY = Math.max(2 * scale, Math.round((top - chipH) / 2));
+  const shardChipW = text.shards.width + 8 * scale;
   const goldChipW = text.gold.width + 8 * scale;
-  const purseGap = 10 * scale;
-  const purseW = goldChipW + purseGap + shardChipW;
-  const purseX = width - pad - purseW;
-  drawPlate(plate, purseX, pad, goldChipW, chipH);
-  const shardPlate = purseX + goldChipW + purseGap;
-  drawPlate(plate, shardPlate, pad, shardChipW, chipH);
-  text.gold.setPosition(purseX + 4 * scale, pad + 4 * scale);
-  const shardX = shardPlate + 4 * scale;
-  plate.fillStyle(PALETTE.rare, 1);
-  drawMiniDiamond(plate, shardX, pad + Math.round(chipH / 2) - 2 * scale, scale);
-  text.shards.setPosition(shardX + 8 * scale, pad + 4 * scale);
+  const purseGap = 6 * scale;
+  const shardPlate = width - pad - shardChipW;
+  const goldPlate = shardPlate - purseGap - goldChipW;
+  drawPlate(plate, goldPlate, chipY, goldChipW, chipH);
+  drawPlate(plate, shardPlate, chipY, shardChipW, chipH);
+  text.gold.setPosition(goldPlate + 4 * scale, chipY + 4 * scale);
+  text.shards.setPosition(shardPlate + 4 * scale, chipY + 4 * scale);
 
   const chips = [text.weapon, text.ammo, text.secondary, text.dash];
   let chipX = pad;
-  const chipY = height - pad - chipH;
+  const trayY = height - pad - chipH;
   for (const chip of chips) {
     const chipW = chip.width + 10 * scale;
-    drawPlate(plate, chipX, chipY, chipW, chipH);
-    chip.setPosition(chipX + 5 * scale, chipY + 4 * scale);
+    drawPlate(plate, chipX, trayY, chipW, chipH);
+    chip.setPosition(chipX + 5 * scale, trayY + 4 * scale);
     chipX += chipW + 4 * scale;
   }
 
@@ -298,18 +305,6 @@ function drawPlate(
   graphics.fillStyle(PALETTE.violet, 1);
   graphics.fillRect(x, y, w, 1);
   graphics.fillRect(x, y, 1, h);
-}
-
-function drawMiniDiamond(
-  graphics: Phaser.GameObjects.Graphics,
-  x: number,
-  y: number,
-  scale: number,
-): void {
-  const s = Math.max(1, scale);
-  graphics.fillRect(x + s, y, s, s);
-  graphics.fillRect(x, y + s, 3 * s, s);
-  graphics.fillRect(x + s, y + 2 * s, s, s);
 }
 
 function heartRowWidth(maxHp: number, scale: number): number {

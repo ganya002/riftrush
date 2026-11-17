@@ -15,6 +15,7 @@ import {
   triggerShake,
   updateFeel,
 } from './feel';
+import { hudTop } from '../ui/hud';
 import { roomZoom } from './view';
 import {
   ActiveEffect,
@@ -565,17 +566,18 @@ export class RunScene extends Phaser.Scene {
     const roomH = this.room.height * TILE;
     const viewW = Math.max(1, this.scale.width);
     const viewH = Math.max(1, this.scale.height);
+    const top = hudTop(this);
+    const worldH = Math.max(1, viewH - top);
     const cam = this.cameras.main;
-    cam.setSize(viewW, viewH);
-    cam.setZoom(roomZoom(viewW, viewH, roomW, roomH));
+    cam.setViewport(0, top, viewW, worldH);
+    cam.setZoom(roomZoom(viewW, worldH, roomW, roomH));
     cam.roundPixels = true;
     cam.setBounds(this.origin.x, this.origin.y, roomW, roomH);
     this.physics.world.setBounds(this.origin.x, this.origin.y, roomW, roomH);
-    this.uiCam?.setSize(viewW, viewH);
-    this.uiCam?.setPosition(0, 0);
+    this.uiCam?.setViewport(0, 0, viewW, viewH);
     this.uiCam?.setScroll(0, 0);
     this.flash.setPosition(viewW / 2, viewH / 2).setSize(viewW, viewH);
-    this.toastText.setPosition(viewW / 2, 28);
+    this.toastText.setPosition(viewW / 2, top + 8);
     this.paintVignette(viewW, viewH);
   }
 
