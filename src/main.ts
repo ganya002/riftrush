@@ -1,9 +1,20 @@
 import Phaser from 'phaser';
 import { RunScene } from './game/RunScene';
-import { HubScene, SummaryScene, TitleScene } from './game/modules';
+import {
+  HubScene,
+  SummaryScene,
+  TitleScene,
+  bootArt,
+  bootAudio,
+  loadSettings,
+  music,
+  setMuted,
+  setVolume,
+  type MusicMode,
+} from './game/modules';
 
-export const GAME_WIDTH = 320;
-export const GAME_HEIGHT = 180;
+export const GAME_WIDTH = 480;
+export const GAME_HEIGHT = 270;
 
 function integerZoom(): number {
   const width = Math.max(1, window.innerWidth);
@@ -51,6 +62,22 @@ game.events.once(Phaser.Core.Events.READY, () => {
   game.canvas.style.outline = 'none';
   game.canvas.focus();
 });
+
+function arm(key: string, mode: MusicMode | null): void {
+  const scene = game.scene.getScene(key);
+  scene?.events.on(Phaser.Scenes.Events.CREATE, () => {
+    bootArt(scene);
+    bootAudio(scene);
+    const settings = loadSettings();
+    setVolume(settings.volume);
+    setMuted(settings.muted);
+    if (mode) music(mode);
+  });
+}
+
+arm('title', 'title');
+arm('hub', 'hub');
+arm('summary', 'hub');
 
 window.addEventListener('keydown', (event) => {
   if (event.code === 'Space' || event.code === 'ArrowUp' || event.code === 'ArrowDown') {

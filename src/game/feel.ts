@@ -72,6 +72,11 @@ export function updateFeel(dt: number): void {
   }
 }
 
+function juiceKey(scene: Phaser.Scene, keys: readonly string[]): string | null {
+  for (const key of keys) if (scene.textures.exists(key)) return key;
+  return null;
+}
+
 function mote(
   scene: Phaser.Scene,
   x: number,
@@ -104,7 +109,7 @@ export function burst(
       scene,
       x,
       y,
-      'particle',
+      juiceKey(scene, ['glow-cyan', 'glow', 'particle']) ?? 'glow-cyan',
       tint,
       0.18 + Math.random() * 0.22,
       Math.cos(angle) * vel,
@@ -136,7 +141,17 @@ export function muzzle(
   angle: number,
   tint: number,
 ): void {
-  const img = mote(scene, x, y, 'muzzle', tint, 0.045, 0, 0, 28);
+  const img = mote(
+    scene,
+    x,
+    y,
+    juiceKey(scene, ['glow-pink', 'glow', 'muzzle']) ?? 'glow',
+    tint,
+    0.045,
+    0,
+    0,
+    28,
+  );
   img?.setRotation(angle).setBlendMode(Phaser.BlendModes.ADD);
 }
 
@@ -148,8 +163,9 @@ export function beam(
   length: number,
   tint: number,
 ): void {
-  if (!scene.textures.exists('beam')) return;
-  const img = scene.add.image(x, y, 'beam').setOrigin(0, 0.5).setTint(tint).setDepth(23);
+  const key = juiceKey(scene, ['bullet-laser', 'glow-cyan', 'beam']);
+  if (!key) return;
+  const img = scene.add.image(x, y, key).setOrigin(0, 0.5).setTint(tint).setDepth(23);
   img.setRotation(angle);
   img.displayWidth = Math.max(4, length);
   img.setBlendMode(Phaser.BlendModes.ADD);
@@ -157,7 +173,17 @@ export function beam(
 }
 
 export function shockwave(scene: Phaser.Scene, x: number, y: number, tint: number): void {
-  const img = mote(scene, x, y, 'ring', tint, 0.22, 0, 0, 27);
+  const img = mote(
+    scene,
+    x,
+    y,
+    juiceKey(scene, ['glow-pink', 'glow', 'ring']) ?? 'glow',
+    tint,
+    0.22,
+    0,
+    0,
+    27,
+  );
   if (!img) return;
   img.setScale(0.3);
   const entry = motes[motes.length - 1];

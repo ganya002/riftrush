@@ -1,37 +1,34 @@
 /**
- * Integration switch.
- *
- * This is the only file that should be retargeted when the real modules land.
- * Point each export at `src/world`, `src/combat`, `src/loot`, `src/events`,
- * `src/ui`, `src/meta`, `src/art`, or `src/audio` and leave RunScene alone.
- *
- * The combat shim also reads scene data set by RunScene:
- * `playerBullets`, `walls`, `roomBounds`, `liveEnemies`, `explodeOnDeath`, `paused`, `bossBar`.
- * Enemy sprites expose a `hurt(amount, fromX, fromY)` data callback.
+ * Integration switch. RunScene and main import the real modules through here.
  */
-export { bootArt, PALETTE } from './shims/art';
-export { bootAudio, music, setMuted, setVolume, sfx } from './shims/audio';
-export type { MusicMode } from './shims/audio';
-export { startEncounter } from './shims/combat';
-export type { Encounter, EncounterHooks } from './shims/combat';
-export { describeEvent, rollFloorModifier, rollRoomEvent } from './shims/events';
-export type { GameEvent } from './shims/events';
-export { rollDrop, WEAPON_IDS } from './shims/loot';
-export type { Drop, Rarity, RelicDrop, WeaponDrop, WeaponId } from './shims/loot';
+export { bootArt, blitRoom, PALETTE } from '../art';
+export type { AutotileLayer } from '../art';
+export { bootAudio, music, setMuted, setVolume, sfx } from '../audio';
+export type { MusicMode, SfxName } from '../audio';
+export { startEncounter } from '../combat';
+export type { CombatHooks } from '../combat';
+export { DataKey } from '../combat/types';
 export {
-  SAVE_KEY,
-  buyUpgrade,
-  characters,
-  getCharacter,
-  loadSave,
-  save,
-  selectCharacter,
-  spendShards,
-  unlock,
-  updateSettings,
-} from './shims/meta';
-export type { CharacterDef, SaveData, Settings } from './shims/meta';
-export { HubScene, SummaryScene, TitleScene, mountHud, mountPause } from './shims/ui';
-export type { HudState, PauseHandle } from './shims/ui';
-export { generateFloor } from './shims/world';
-export type { Biome, DoorDef, DoorDir, FloorDef, RoomDef, RoomKind } from './shims/world';
+  EVENT_DETAILS,
+  EVENT_IDS,
+  eventPayload,
+  rollFloorModifier,
+  rollRoomEvent,
+} from '../events';
+export type { EventId, EventPayload, FloorModifier, RoomEvent } from '../events';
+export { applySynergies, rollDrop, startingWeapon } from '../loot';
+export type { Drop, Relic, Weapon, WeaponId } from '../loot';
+export { CHARACTERS, SAVE_KEY, addShards, getCharacter, getPerk, loadSave } from '../meta';
+export type { CharacterDef, SaveData } from '../meta';
+export {
+  HubScene,
+  SummaryScene,
+  TitleScene,
+  loadSettings,
+  mountHud,
+  mountPause,
+  writeSettings,
+} from '../ui';
+export type { GameSettings, HudState, RunData, SummaryData } from '../ui';
+export { generateFloor } from '../world';
+export type { Biome, DoorDef, DoorDir, FloorDef, RoomDef, RoomKind } from '../world';

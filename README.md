@@ -10,6 +10,6 @@ npm run lint
 npm run test
 ```
 
-Internal resolution is 320×180, scaled by whole pixels. WASD move, mouse aim, hold click to shoot, Space or Shift dash, E interact, Q active, Esc pause.
+Internal resolution is 480×270, scaled by whole pixels. WASD move, mouse aim, hold click to shoot, Space or Shift dash, E interact, Q pulse, Esc pause.
 
-`src/game/modules.ts` is the integration switch. It re-exports playable shims for world, combat, loot, events, ui, meta, art, and audio. Retarget that file when the real modules land.
+`src/game/modules.ts` re-exports the real world, combat, loot, events, ui, meta, art, and audio modules.

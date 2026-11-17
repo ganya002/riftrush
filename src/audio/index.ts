@@ -348,10 +348,26 @@ function scheduleStep(pattern: Pattern, note: StepNote, when: number, stepDur: n
   if (!g) return;
   if (note.bass !== null) {
     const slide = pattern.bassWave === 'sawtooth' ? midi(note.bass - 1) : midi(note.bass);
-    tone(when, midi(note.bass), slide, stepDur * pattern.bassSteps, pattern.bassWave, pattern.bassGain, g.music);
+    tone(
+      when,
+      midi(note.bass),
+      slide,
+      stepDur * pattern.bassSteps,
+      pattern.bassWave,
+      pattern.bassGain,
+      g.music,
+    );
   }
   if (note.arp !== null) {
-    tone(when, midi(note.arp), midi(note.arp), stepDur * pattern.arpSteps, pattern.arpWave, pattern.arpGain, g.music);
+    tone(
+      when,
+      midi(note.arp),
+      midi(note.arp),
+      stepDur * pattern.arpSteps,
+      pattern.arpWave,
+      pattern.arpGain,
+      g.music,
+    );
   }
   if (note.kick) {
     tone(when, 150, 42, 0.12, 'sine', 0.22, g.music);
@@ -381,8 +397,9 @@ function runLoop(current: MusicMode, id: number): void {
       step += 1;
       next += stepDur;
     }
-    timer = setTimeout(tick, 40);
-    if (typeof timer === 'object' && timer && 'unref' in timer) timer.unref();
+    const handle = setTimeout(tick, 40);
+    timer = handle;
+    (handle as unknown as { unref?: () => void }).unref?.();
   };
   tick();
 }
