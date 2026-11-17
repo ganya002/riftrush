@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { WEAPONS } from '../meta';
+import { hudStrip } from '../game/view';
 import { pin } from './draw';
 import { fitText, pxText, textHeight } from './font';
 import { PALETTE, RARITY_COLOR } from './theme';
@@ -29,9 +30,10 @@ const HUD_NAME = 'riftrush-hud';
 
 /** Screen strip reserved for gold, shards, and hearts. The world camera starts below it. */
 export function hudTop(scene: Phaser.Scene): number {
-  const scale = hudScale(scene);
-  const line = textHeight(scale * 2);
-  return 4 * scale + line + 12 * scale;
+  return hudStrip(
+    Math.max(1, Math.floor(scene.scale.width)),
+    Math.max(1, Math.floor(scene.scale.height)),
+  );
 }
 
 const HEART = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];

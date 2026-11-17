@@ -103,20 +103,11 @@ function floorTile(biome: Biome, mask: number, variant: number): Frame {
       if (grout) color = ink.shadow;
       else if (x === 1 || y === 1) color = ink.lip;
       else if (x > 12 && y > 12) color = ink.floor2;
-      if (!grout && variant === 2 && Math.abs(x - 8) + Math.abs(y - 8) <= 3) color = ink.speck;
-      if (!grout && variant === 1 && (x === 5 || y === 11) && hash(x, y, ink.salt) % 2 === 0) {
-        color = ink.floor2;
-      }
-      if (
-        !grout &&
-        variant === 3 &&
-        x > 3 &&
-        x < 12 &&
-        y > 3 &&
-        y < 12 &&
-        (x === y || x + y === 15)
-      ) {
-        color = ink.speck;
+      // A few worn pixels. A full-tile cross, bar, or diamond reads as a symbol grid.
+      const wear = hash(x, y, ink.salt + variant * 13);
+      if (!grout && x > 3 && x < 13 && y > 3 && y < 13 && wear % 19 === 0) color = ink.floor2;
+      if (!grout && variant === 2 && x >= 10 && x <= 12 && y >= 4 && y <= 5 && wear % 2 === 0) {
+        color = ink.shadow;
       }
       const shadow = (n && y < LIP) || (w && x < LIP) || (s && y > 15 - LIP) || (e && x > 15 - LIP);
       if (shadow) color = ink.shadow;

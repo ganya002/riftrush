@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitView, roomZoom } from '../../src/game/view';
+import { fitView, hudStrip, roomTiles, roomZoom } from '../../src/game/view';
 
 describe('fitView', () => {
   it('uses the largest integer scale that fills a 16:9 window', () => {
@@ -7,6 +7,11 @@ describe('fitView', () => {
     expect(view.zoom).toBe(4);
     expect(view.width * view.zoom).toBe(1920);
     expect(view.height * view.zoom).toBe(1080);
+    const worldH = view.height - hudStrip(view.width, view.height) * 2;
+    const tiles = roomTiles(view.width, worldH);
+    expect(tiles.cols * 16).toBeGreaterThanOrEqual(view.width);
+    expect(tiles.rows * 16).toBeGreaterThanOrEqual(worldH);
+    expect(roomZoom(view.width, worldH, tiles.cols * 16, tiles.rows * 16)).toBe(1);
   });
 
   it('grows the buffer so a taller window is not letterboxed', () => {
@@ -26,11 +31,15 @@ describe('fitView', () => {
 });
 
 describe('roomZoom', () => {
-  it('covers a square room so the view is not wider than the floor', () => {
-    const zoom = roomZoom(480, 270, 272, 272);
-    expect(zoom).toBe(2);
-    expect(480 / zoom).toBeLessThanOrEqual(272);
-    expect(270 / zoom).toBeLessThanOrEqual(272);
+  it('fits a start room inside the view instead of cropping to the floor', () => {
+    const zoom = roomZoom(960, 476, 272, 272);
+    expect(zoom).toBe(1);
+    expect(272 * zoom).toBeLessThanOrEqual(476);
+    expect(272 * zoom).toBeLessThanOrEqual(960);
+  });
+
+  it('zooms in by an integer when the room is much smaller than the view', () => {
+    expect(roomZoom(800, 640, 200, 200)).toBe(3);
   });
 
   it('stays at 1 when the room is already larger than the view', () => {
