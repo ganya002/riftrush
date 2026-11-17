@@ -117,7 +117,13 @@ export function bootArt(scene: Phaser.Scene): void {
     addAnim(scene, key, key, 0, 3, rate, -1);
   }
 
-  for (const key of ['bullet-pistol', 'bullet-shot', 'bullet-laser', 'bullet-orb', 'bullet-enemy']) {
+  for (const key of [
+    'bullet-pistol',
+    'bullet-shot',
+    'bullet-laser',
+    'bullet-orb',
+    'bullet-enemy',
+  ]) {
     addAnim(scene, key, key, 0, 3, 14, -1);
   }
   addAnim(scene, 'glow-pulse', 'glow', 0, 3, 8, -1);
@@ -126,7 +132,10 @@ export function bootArt(scene: Phaser.Scene): void {
   addAnim(scene, 'cursed-chest-idle', 'cursed-chest', 0, 3, 6, -1);
 }
 
-export function blitAutotile(scene: Phaser.Scene, layerData: AutotileLayer): Phaser.GameObjects.Container {
+export function blitAutotile(
+  scene: Phaser.Scene,
+  layerData: AutotileLayer,
+): Phaser.GameObjects.Container {
   return blitRoom(scene, layerData.biome, layerData.tileWidth, layerData.grid);
 }
 

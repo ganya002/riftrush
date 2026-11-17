@@ -87,14 +87,32 @@ export class SummaryScene extends Phaser.Scene {
     ];
     const rowScale = 2 * stage.S;
     const texts = rows.map(([label, value], index) => {
-      const line = pxText(this, panelX + unit(stage, 16), panelY + unit(stage, 16) + index * unit(stage, 22), pair(label, value), rowScale, index === rows.length - 1 ? PALETTE.rift : PALETTE.bone);
+      const line = pxText(
+        this,
+        panelX + unit(stage, 16),
+        panelY + unit(stage, 16) + index * unit(stage, 22),
+        pair(label, value),
+        rowScale,
+        index === rows.length - 1 ? PALETTE.rift : PALETTE.bone,
+      );
       line.setMaxWidth(panelW - unit(stage, 32));
       return line;
     });
 
-    button(this, layer, Math.round(center - unit(stage, 70)), stage.y + unit(stage, 226), unit(stage, 140), unit(stage, 24), 'RETURN', rowScale, () => this.goHub(), {
-      accent: PALETTE.mint,
-    });
+    button(
+      this,
+      layer,
+      Math.round(center - unit(stage, 70)),
+      stage.y + unit(stage, 226),
+      unit(stage, 140),
+      unit(stage, 24),
+      'RETURN',
+      rowScale,
+      () => this.goHub(),
+      {
+        accent: PALETTE.mint,
+      },
+    );
 
     const hint = pxText(this, 0, 0, 'ENTER', stage.S, PALETTE.common);
     placeCentered(hint, center, stage.y + stage.h - textHeight(stage.S) - unit(stage, 8));

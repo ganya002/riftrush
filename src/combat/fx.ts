@@ -65,7 +65,13 @@ export function reticle(gfx: Phaser.GameObjects.Graphics, x: number, y: number, 
   gfx.strokePath();
 }
 
-export function shieldArc(gfx: Phaser.GameObjects.Graphics, x: number, y: number, facing: number, radius: number): void {
+export function shieldArc(
+  gfx: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  facing: number,
+  radius: number,
+): void {
   gfx.lineStyle(3, CYAN, 0.95);
   gfx.beginPath();
   gfx.arc(x, y, radius, facing - SHIELD_HALF, facing + SHIELD_HALF, false);
@@ -92,14 +98,25 @@ export function wedge(
   gfx.strokePath();
 }
 
-export function ringTell(gfx: Phaser.GameObjects.Graphics, x: number, y: number, radius: number): void {
+export function ringTell(
+  gfx: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  radius: number,
+): void {
   gfx.lineStyle(2, GOLD, 0.9);
   gfx.strokeCircle(x, y, radius);
   gfx.fillStyle(GOLD, 0.12);
   gfx.fillCircle(x, y, radius);
 }
 
-function diamond(gfx: Phaser.GameObjects.Graphics, x: number, y: number, radius: number, color: number): void {
+function diamond(
+  gfx: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  radius: number,
+  color: number,
+): void {
   gfx.lineStyle(2, color, 1);
   gfx.beginPath();
   gfx.moveTo(x, y - radius);
@@ -110,7 +127,13 @@ function diamond(gfx: Phaser.GameObjects.Graphics, x: number, y: number, radius:
   gfx.strokePath();
 }
 
-function glyph(gfx: Phaser.GameObjects.Graphics, x: number, y: number, elite: EliteMod, color: number): void {
+function glyph(
+  gfx: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  elite: EliteMod,
+  color: number,
+): void {
   gfx.lineStyle(1, color, 1);
   if (elite === 'fast') {
     gfx.beginPath();
@@ -188,7 +211,7 @@ export function burst(
   count: number,
 ): void {
   for (let i = 0; i < count; i++) {
-    const image = scene.add.image(x, y, 'rr-pellet');
+    const image = scene.add.image(x, y, 'bullet-enemy');
     image.setDepth(20);
     image.setTint(colors[i % colors.length]);
     image.setScale(0.8);

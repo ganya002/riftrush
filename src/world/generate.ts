@@ -1,12 +1,5 @@
 import { rngFor, type Rng } from './rng';
-import type {
-  Biome,
-  DoorDef,
-  DoorDir,
-  FloorDef,
-  RoomDef,
-  RoomKind,
-} from './types';
+import type { Biome, DoorDef, DoorDir, FloorDef, RoomDef, RoomKind } from './types';
 
 /**
  * One deterministic floor.

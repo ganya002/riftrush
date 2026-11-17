@@ -1,13 +1,6 @@
 export type Biome = 'rift' | 'ash' | 'abyss';
 
-export type RoomKind =
-  | 'start'
-  | 'combat'
-  | 'treasure'
-  | 'shop'
-  | 'event'
-  | 'elite'
-  | 'boss';
+export type RoomKind = 'start' | 'combat' | 'treasure' | 'shop' | 'event' | 'elite' | 'boss';
 
 export type DoorDir = 'n' | 's' | 'e' | 'w';
 

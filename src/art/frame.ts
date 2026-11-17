@@ -44,7 +44,9 @@ export function parse(rows: string[]): Frame {
 export function pix(spec: string): Frame {
   // Drop the trailing indent that sits on the closing line of a template literal.
   const rows = spec.replace(/^\n/, '').replace(/\s+$/, '').split('\n');
-  const indents = rows.filter((row) => row.trim().length > 0).map((row) => row.match(/^ */)?.[0].length ?? 0);
+  const indents = rows
+    .filter((row) => row.trim().length > 0)
+    .map((row) => row.match(/^ */)?.[0].length ?? 0);
   const indent = indents.length ? Math.min(...indents) : 0;
   return parse(rows.map((row) => row.slice(indent)));
 }
@@ -78,14 +80,28 @@ export function get(frame: Frame, x: number, y: number): number {
   return frame[y][x];
 }
 
-export function fillRect(frame: Frame, x: number, y: number, w: number, h: number, color: number): void {
+export function fillRect(
+  frame: Frame,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  color: number,
+): void {
   for (let yy = y; yy < y + h; yy++) {
     for (let xx = x; xx < x + w; xx++) plot(frame, xx, yy, color);
   }
 }
 
 /** Hard-edged ellipse. Coverage is all-or-nothing per pixel. */
-export function fillEllipse(frame: Frame, cx: number, cy: number, rx: number, ry: number, color: number): void {
+export function fillEllipse(
+  frame: Frame,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  color: number,
+): void {
   if (rx <= 0 || ry <= 0) return;
   const rrx = rx * rx;
   const rry = ry * ry;
@@ -155,12 +171,23 @@ export function recolor(src: Frame, map: Readonly<Record<number, number>>): Fram
   return src.map((row) => row.map((v) => (v >= 0 && map[v] !== undefined ? map[v]! : v)));
 }
 
-export function recolorWhere(src: Frame, fn: (color: number, x: number, y: number) => number): Frame {
+export function recolorWhere(
+  src: Frame,
+  fn: (color: number, x: number, y: number) => number,
+): Frame {
   return src.map((row, y) => row.map((v, x) => (v < 0 ? -1 : fn(v, x, y))));
 }
 
 /** Move pixels inside a rectangle, leaving the rest of the frame in place. */
-export function shiftRegion(src: Frame, x0: number, y0: number, x1: number, y1: number, dx: number, dy: number): Frame {
+export function shiftRegion(
+  src: Frame,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  dx: number,
+  dy: number,
+): Frame {
   const out = clone(src);
   const w = src[0].length;
   const h = src.length;
@@ -220,7 +247,8 @@ export function rimLight(src: Frame, light: number): Frame {
 }
 
 export function hash(x: number, y: number, salt: number): number {
-  let n = Math.imul(x | 0, 0x9e3779b1) ^ Math.imul(y | 0, 0x85ebca77) ^ Math.imul(salt | 0, 0xc2b2ae35);
+  let n =
+    Math.imul(x | 0, 0x9e3779b1) ^ Math.imul(y | 0, 0x85ebca77) ^ Math.imul(salt | 0, 0xc2b2ae35);
   n = Math.imul(n ^ (n >>> 16), 0x7feb352d);
   n = Math.imul(n ^ (n >>> 15), 0x846ca68b);
   return (n ^ (n >>> 16)) >>> 0;

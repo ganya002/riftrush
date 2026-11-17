@@ -148,14 +148,7 @@ describe('rarity weights', () => {
     for (const rarity of RARITIES) {
       for (const floor of [1, 20]) {
         const drop = rollDrop(
-          scripted([
-            NULL_DROP_CHANCE,
-            rarityUnit(floor, rarity),
-            WEAPON_DROP_CHANCE / 2,
-            0,
-            0,
-            0,
-          ]),
+          scripted([NULL_DROP_CHANCE, rarityUnit(floor, rarity), WEAPON_DROP_CHANCE / 2, 0, 0, 0]),
           floor,
           [],
         );
@@ -212,14 +205,7 @@ describe('rarity weights', () => {
   it('rolls stats inside the rarity band so two rares of one id differ', () => {
     const pistol = (factor: number, jitter: number) =>
       rollDrop(
-        scripted([
-          0.5,
-          rarityUnit(1, 'rare'),
-          WEAPON_DROP_CHANCE / 2,
-          0,
-          factor,
-          jitter,
-        ]),
+        scripted([0.5, rarityUnit(1, 'rare'), WEAPON_DROP_CHANCE / 2, 0, factor, jitter]),
         1,
         [],
       );
@@ -251,14 +237,7 @@ describe('rarity weights', () => {
     const indexUnit = (pyreIndex + 0.5) / rares.length;
     const pyre = (factor: number) =>
       rollDrop(
-        scripted([
-          0.5,
-          rarityUnit(1, 'rare'),
-          (WEAPON_DROP_CHANCE + 1) / 2,
-          indexUnit,
-          factor,
-          0,
-        ]),
+        scripted([0.5, rarityUnit(1, 'rare'), (WEAPON_DROP_CHANCE + 1) / 2, indexUnit, factor, 0]),
         1,
         [],
       );
@@ -293,14 +272,7 @@ describe('rarity weights', () => {
 describe('unlock filter', () => {
   function weaponDrop(indexUnit: number, unlocked: readonly string[], floor = 2) {
     return rollDrop(
-      scripted([
-        0.5,
-        rarityUnit(floor, 'common'),
-        WEAPON_DROP_CHANCE / 2,
-        indexUnit,
-        0.2,
-        0.2,
-      ]),
+      scripted([0.5, rarityUnit(floor, 'common'), WEAPON_DROP_CHANCE / 2, indexUnit, 0.2, 0.2]),
       floor,
       unlocked,
     );
@@ -481,14 +453,7 @@ describe('cursed has a drawback', () => {
 
   it('rolls cursed weapons with a drawback and lower hp', () => {
     const drop = rollDrop(
-      scripted([
-        0.5,
-        rarityUnit(1, 'cursed'),
-        WEAPON_DROP_CHANCE / 2,
-        0,
-        0.4,
-        0.4,
-      ]),
+      scripted([0.5, rarityUnit(1, 'cursed'), WEAPON_DROP_CHANCE / 2, 0, 0.4, 0.4]),
       1,
       [],
     );

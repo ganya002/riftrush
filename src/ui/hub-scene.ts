@@ -12,7 +12,17 @@ import {
   unlockWeapon,
   type PerkId,
 } from '../meta';
-import { addPanel, button, card, paintBar, paintDiamond, pin, stageOfScene, unit, type Stage } from './draw';
+import {
+  addPanel,
+  button,
+  card,
+  paintBar,
+  paintDiamond,
+  pin,
+  stageOfScene,
+  unit,
+  type Stage,
+} from './draw';
 import { pxText, textHeight, textWidth } from './font';
 import { createRift } from './rift';
 import { PALETTE, RARITY_COLOR } from './theme';
@@ -103,7 +113,13 @@ export class HubScene extends Phaser.Scene {
     const shardsText = pxText(this, 0, down(11), String(shards), font, PALETTE.gold);
     shardsText.setPosition(at(456) - shardsText.width, down(11));
     root.add(shardsText);
-    paintDiamond(chrome, at(456) - shardsText.width - unit(stage, 8), down(14), stage.S, PALETTE.gold);
+    paintDiamond(
+      chrome,
+      at(456) - shardsText.width - unit(stage, 8),
+      down(14),
+      stage.S,
+      PALETTE.gold,
+    );
     if (!this.notice) return;
     const note = pxText(this, 0, down(15), this.notice, small, PALETTE.rift);
     note.setPosition(Math.round(at(240) - note.width / 2), down(15));
@@ -182,15 +198,56 @@ export class HubScene extends Phaser.Scene {
       root.add(pxText(this, at(400), down(46), 'THORNS', small, PALETTE.life));
     }
 
-    this.stat(root, chrome, at(182), down(76), 'HP', selected.maxHp / 10, PALETTE.rift, small, stage);
-    this.stat(root, chrome, at(270), down(76), 'SPD', selected.moveSpeed / 148, PALETTE.mint, small, stage);
-    this.stat(root, chrome, at(358), down(76), 'DASH', 0.42 / selected.dashCooldown, PALETTE.gold, small, stage);
+    this.stat(
+      root,
+      chrome,
+      at(182),
+      down(76),
+      'HP',
+      selected.maxHp / 10,
+      PALETTE.rift,
+      small,
+      stage,
+    );
+    this.stat(
+      root,
+      chrome,
+      at(270),
+      down(76),
+      'SPD',
+      selected.moveSpeed / 148,
+      PALETTE.mint,
+      small,
+      stage,
+    );
+    this.stat(
+      root,
+      chrome,
+      at(358),
+      down(76),
+      'DASH',
+      0.42 / selected.dashCooldown,
+      PALETTE.gold,
+      small,
+      stage,
+    );
 
     root.add(pxText(this, at(182), down(96), `SEED ${this.seed}`, small, PALETTE.gold));
-    button(this, root, at(390), down(92), unit(stage, 70), unit(stage, 16), 'REROLL', small, () => this.reroll(), {
-      accent: PALETTE.gold,
-      text: PALETTE.gold,
-    });
+    button(
+      this,
+      root,
+      at(390),
+      down(92),
+      unit(stage, 70),
+      unit(stage, 16),
+      'REROLL',
+      small,
+      () => this.reroll(),
+      {
+        accent: PALETTE.gold,
+        text: PALETTE.gold,
+      },
+    );
 
     const unlocked = isCharacterUnlocked(selected.id);
     const affordable = unlocked || shards >= selected.cost;
@@ -207,7 +264,10 @@ export class HubScene extends Phaser.Scene {
         if (unlocked) this.startRun();
         else this.tryCharacter(selected.id);
       },
-      { accent: affordable ? PALETTE.mint : PALETTE.common, text: affordable ? PALETTE.bone : PALETTE.rift },
+      {
+        accent: affordable ? PALETTE.mint : PALETTE.common,
+        text: affordable ? PALETTE.bone : PALETTE.rift,
+      },
     );
   }
 
@@ -223,7 +283,15 @@ export class HubScene extends Phaser.Scene {
     stage: Stage,
   ): void {
     root.add(pxText(this, x, y, label, scale, color));
-    paintBar(chrome, x, y + textHeight(scale) + stage.S, unit(stage, 72), unit(stage, 4), amount, color);
+    paintBar(
+      chrome,
+      x,
+      y + textHeight(scale) + stage.S,
+      unit(stage, 72),
+      unit(stage, 4),
+      amount,
+      color,
+    );
   }
 
   private paintWeapons(
@@ -297,7 +365,13 @@ export class HubScene extends Phaser.Scene {
         unit(stage, 30),
         PALETTE.violet,
         [
-          { text: perk.name, scale: small, color: PALETTE.bone, x: unit(stage, 6), y: unit(stage, 4) },
+          {
+            text: perk.name,
+            scale: small,
+            color: PALETTE.bone,
+            x: unit(stage, 6),
+            y: unit(stage, 4),
+          },
           {
             text: `${rank}/${perk.maxRank}`,
             scale: small,
@@ -400,7 +474,12 @@ export class HubScene extends Phaser.Scene {
     if (code === 'ArrowLeft' || code === 'ArrowUp' || code === 'KeyA' || code === 'KeyW') {
       event.preventDefault();
       this.nudge(-1);
-    } else if (code === 'ArrowRight' || code === 'ArrowDown' || code === 'KeyD' || code === 'KeyS') {
+    } else if (
+      code === 'ArrowRight' ||
+      code === 'ArrowDown' ||
+      code === 'KeyD' ||
+      code === 'KeyS'
+    ) {
       event.preventDefault();
       this.nudge(1);
     }

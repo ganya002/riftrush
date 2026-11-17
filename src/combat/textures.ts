@@ -12,8 +12,8 @@ export const TEX = {
   shield: 'enemy-shield',
   bossA: 'enemy-boss-a',
   bossB: 'enemy-boss-b',
-  pellet: 'rr-pellet',
-  ring: 'rr-ring',
+  pellet: 'bullet-enemy',
+  ring: 'glow',
 } as const;
 
 function nearest(scene: Phaser.Scene, key: string): void {
@@ -23,9 +23,18 @@ function nearest(scene: Phaser.Scene, key: string): void {
   if (typeof filter === 'number' && texture.setFilter) texture.setFilter(filter);
 }
 
-function uploadCanvas(scene: Phaser.Scene, key: string, size: number, rgba: Uint8ClampedArray): boolean {
+function uploadCanvas(
+  scene: Phaser.Scene,
+  key: string,
+  size: number,
+  rgba: Uint8ClampedArray,
+): boolean {
   const textures = scene.textures as Phaser.Textures.TextureManager & {
-    createCanvas?: (name: string, width: number, height: number) => Phaser.Textures.CanvasTexture | null;
+    createCanvas?: (
+      name: string,
+      width: number,
+      height: number,
+    ) => Phaser.Textures.CanvasTexture | null;
   };
   if (!textures.createCanvas) return false;
   const canvas = textures.createCanvas(key, size, size);
@@ -39,7 +48,12 @@ function uploadCanvas(scene: Phaser.Scene, key: string, size: number, rgba: Uint
   return true;
 }
 
-function uploadGraphics(scene: Phaser.Scene, key: string, size: number, rgba: Uint8ClampedArray): void {
+function uploadGraphics(
+  scene: Phaser.Scene,
+  key: string,
+  size: number,
+  rgba: Uint8ClampedArray,
+): void {
   const graphics = scene.add.graphics();
   graphics.setVisible(false);
   for (let y = 0; y < size; y++) {

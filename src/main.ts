@@ -79,6 +79,10 @@ arm('title', 'title');
 arm('hub', 'hub');
 arm('summary', 'hub');
 
+if (import.meta.env.DEV) {
+  (window as unknown as { __RIFT?: Phaser.Game }).__RIFT = game;
+}
+
 window.addEventListener('keydown', (event) => {
   if (event.code === 'Space' || event.code === 'ArrowUp' || event.code === 'ArrowDown') {
     event.preventDefault();

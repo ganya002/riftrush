@@ -245,7 +245,13 @@ function wallPoints(room: Actx, foe: Foe): WallPoint[] {
   const spanMin = horizontal ? room.bounds.y + 16 : room.bounds.x + 16;
   const spanMax = horizontal ? room.bounds.bottom - 16 : room.bounds.right - 16;
   const origin =
-    dir === 0 ? room.bounds.x + 16 : dir === 1 ? room.bounds.right - 16 : dir === 2 ? room.bounds.y + 16 : room.bounds.bottom - 16;
+    dir === 0
+      ? room.bounds.x + 16
+      : dir === 1
+        ? room.bounds.right - 16
+        : dir === 2
+          ? room.bounds.y + 16
+          : room.bounds.bottom - 16;
   const angle = dir === 0 ? 0 : dir === 1 ? Math.PI : dir === 2 ? Math.PI / 2 : -Math.PI / 2;
   const points: WallPoint[] = [];
   for (let cursor = spanMin; cursor <= spanMax; cursor += 18) {

@@ -70,17 +70,19 @@ export function pxText(
   color: number,
 ): Phaser.GameObjects.BitmapText {
   ensureFont(scene);
-  const text = scene.add.bitmapText(Math.round(x), Math.round(y), FONT_KEY, fitText(message), CELL_W * scale);
+  const text = scene.add.bitmapText(
+    Math.round(x),
+    Math.round(y),
+    FONT_KEY,
+    fitText(message),
+    CELL_W * scale,
+  );
   text.setTint(color);
   text.setOrigin(0, 0);
   return text;
 }
 
-export function centerText(
-  text: Phaser.GameObjects.BitmapText,
-  centerX: number,
-  y: number,
-): void {
+export function centerText(text: Phaser.GameObjects.BitmapText, centerX: number, y: number): void {
   const width = text.width || textWidth(text.text, text.fontSize / CELL_W);
   text.setPosition(Math.round(centerX - width / 2), Math.round(y));
 }

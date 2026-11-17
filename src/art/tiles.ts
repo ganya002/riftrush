@@ -103,11 +103,7 @@ function floorTile(biome: Biome, mask: number, variant: number): Frame {
       if (cell % 6 === 0) color = ink.floor1;
       if (grain % 11 === 0) color = ink.floor2;
       if (cell % 19 === 0 && grain % 2 === 0) color = ink.speck;
-      const shadow =
-        (n && y < LIP) ||
-        (w && x < LIP) ||
-        (s && y > 15 - LIP) ||
-        (e && x > 15 - LIP);
+      const shadow = (n && y < LIP) || (w && x < LIP) || (s && y > 15 - LIP) || (e && x > 15 - LIP);
       if (shadow) color = ink.shadow;
       if (n && w && x < LIP && y < LIP) color = ink.floor2;
       if (n && e && x > 15 - LIP && y < LIP) color = ink.floor2;
@@ -196,10 +192,7 @@ function biomeSheets(biome: Biome): Sheet[] {
   for (let variant = 0; variant < WALL_VARIANTS; variant++) {
     for (let mask = 0; mask < 256; mask++) walls.push(wallTile(biome, mask, variant));
   }
-  return [
-    sheet(`tile-${biome}-floor`, floors, 16),
-    sheet(`tile-${biome}-wall`, walls, 16),
-  ];
+  return [sheet(`tile-${biome}-floor`, floors, 16), sheet(`tile-${biome}-wall`, walls, 16)];
 }
 
 export function tileSheets(): Sheet[] {

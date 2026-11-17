@@ -32,6 +32,7 @@ import {
   mountHud,
   mountPause,
   music,
+  RELICS,
   rollDrop,
   rollRoomEvent,
   setMuted,
@@ -144,6 +145,7 @@ export class RunScene extends Phaser.Scene {
   private origin = { x: 0, y: 0 };
   private weaponBase: Weapon = startingWeapon('vesper');
   private relics: Relic[] = [];
+  private active: Relic = relicById('ember-chip');
   private gun: Weapon = startingWeapon('vesper');
   private unlocked: string[] = ['pistol'];
   private keys!: Keys;
@@ -191,7 +193,9 @@ export class RunScene extends Phaser.Scene {
   private dashBuffer = 0;
   private invuln = 0;
   private doorLockout = 0;
-  private pulseCd = 0;
+  private activeCd = 0;
+  private overdrive = 0;
+  private floorPayload: EventPayload | null = null;
   private invertLeft = 0;
   private meteorLeft = 0;
   private meteorT = 0.4;
@@ -231,6 +235,8 @@ export class RunScene extends Phaser.Scene {
     this.unlocked = [...save.unlockedWeaponIds];
     this.weaponBase = startingWeapon(this.characterId);
     this.relics = [];
+    this.active = relicById('ember-chip');
+    this.activeCd = 0;
     this.recompute();
     this.hp = this.maxHp;
     this.gold = 0;
@@ -345,7 +351,8 @@ export class RunScene extends Phaser.Scene {
     this.doorLockout = Math.max(0, this.doorLockout - dt);
     this.fireCd = Math.max(0, this.fireCd - dt);
     this.dashCd = Math.max(0, this.dashCd - dt);
-    this.pulseCd = Math.max(0, this.pulseCd - dt);
+    this.activeCd = Math.max(0, this.activeCd - dt);
+    this.overdrive = Math.max(0, this.overdrive - dt);
     this.invuln = Math.max(0, this.invuln - dt);
     this.dashing = Math.max(0, this.dashing - dt);
     this.invertLeft = Math.max(0, this.invertLeft - dt);
@@ -357,7 +364,7 @@ export class RunScene extends Phaser.Scene {
     if (this.dashBuffer > 0 && this.dashCd <= 0 && this.dashing <= 0) this.startDash();
     this.shoot();
     if (Phaser.Input.Keyboard.JustDown(this.keys.e)) this.interact();
-    if (Phaser.Input.Keyboard.JustDown(this.keys.q)) this.pulse();
+    if (Phaser.Input.Keyboard.JustDown(this.keys.q)) this.useActive();
     this.dress(dt);
     this.updateBullets(dt);
     this.hurtEnemies();
@@ -383,6 +390,7 @@ export class RunScene extends Phaser.Scene {
     const id = asEvent(this.floor.modifier);
     const payload = id ? eventPayload(id, floor, makeRng(`${this.seed}|fx|${floor}`)) : null;
     this.floorFx = fxFrom(id, payload);
+    this.floorPayload = payload;
     this.invertLeft = this.floorFx.invert;
     this.meteorLeft = this.floorFx.meteors;
     const bg =
@@ -408,8 +416,15 @@ export class RunScene extends Phaser.Scene {
     this.furnish(room);
     const width = room.width * TILE;
     const height = room.height * TILE;
+    const padX = Math.max(0, Math.floor((this.scale.width - width) / 2));
+    const padY = Math.max(0, Math.floor((this.scale.height - height) / 2));
     this.physics.world.setBounds(this.origin.x, this.origin.y, width, height);
-    this.cameras.main.setBounds(this.origin.x, this.origin.y, width, height);
+    this.cameras.main.setBounds(
+      this.origin.x - padX,
+      this.origin.y - padY,
+      width + padX * 2,
+      height + padY * 2,
+    );
     this.cameras.main.startFollow(this.player, true, 0.22, 0.22);
     const spawn = this.spawnPoint(arrival);
     this.player.setPosition(spawn.x, spawn.y);
@@ -576,20 +591,20 @@ export class RunScene extends Phaser.Scene {
   private furnish(room: RoomDef): void {
     const center = this.roomCenter();
     if (room.kind === 'treasure') this.spawnChest(center.x, center.y, false, null);
-    if (room.kind === 'shop') this.spawnMerchant(center.x, center.y, null);
+    if (room.kind === 'shop') this.spawnShop(center.x, center.y);
     if (room.kind === 'event') {
       const event = this.eventFor(room);
       this.roomFx = fxFrom(event.id, event.payload);
       this.toast(event.name.toUpperCase());
-      if (event.id === 'hp-merchant') this.spawnMerchant(center.x, center.y, event.payload);
+      if (event.id === 'hp-merchant') this.spawnHeartMerchant(center.x, center.y, event.payload);
       else if (event.id === 'cursed-chest')
         this.spawnChest(center.x, center.y, true, event.payload);
     }
-    if (room.kind === 'start' && this.floorFx && asEvent(this.floor.modifier) === 'hp-merchant') {
-      this.spawnMerchant(center.x, center.y + 28, null);
+    if (room.kind === 'start' && asEvent(this.floor.modifier) === 'hp-merchant') {
+      this.spawnHeartMerchant(center.x, center.y + 28, this.floorPayload);
     }
     if (room.kind === 'start' && asEvent(this.floor.modifier) === 'cursed-chest') {
-      this.spawnChest(center.x, center.y + 28, true, null);
+      this.spawnChest(center.x, center.y + 28, true, this.floorPayload);
     }
   }
 
@@ -620,9 +635,8 @@ export class RunScene extends Phaser.Scene {
       r: 22,
       text: cursed ? 'E CURSE' : 'E OPEN',
       run: () => {
-        if (!sprite.active) return;
-        sprite.disableInteractive();
-        const price = payload?.hpPrice ?? 4;
+        if (!sprite.active || !sprite.visible) return;
+        const price = this.heartCost(payload?.hpPrice, 4);
         if (cursed) {
           if (this.hp <= price) {
             sfx('ui');
@@ -631,6 +645,7 @@ export class RunScene extends Phaser.Scene {
           }
           this.hp -= price;
           damageNumber(this, x, y, price, 0xff2e63);
+          this.curseFollows();
           sprite.setVisible(false);
           this.pendingCursed = true;
           this.nonce += 1;
@@ -658,60 +673,105 @@ export class RunScene extends Phaser.Scene {
     });
   }
 
-  private spawnMerchant(x: number, y: number, payload: EventPayload | null): void {
-    const key = this.textures.exists('shopkeep') ? 'shopkeep' : 'glow';
-    const sprite = this.add.sprite(x, y, key).setDepth(8);
-    if (this.anims.exists('shopkeep-idle')) sprite.play('shopkeep-idle');
-    this.props.push(sprite);
-    const price = payload?.hpPrice ?? 0;
-    const alt = payload?.hpPriceAlt ?? 0;
+  private spawnShop(x: number, y: number): void {
+    this.spawnKeeper(x, y);
     this.interacts.push({
       x,
       y,
       r: 24,
-      text: price > 0 ? `E HEAL ${price}` : 'E HEAL 4G',
+      text: 'E HEAL 6G',
       run: () => {
-        if (price > 0) {
-          if (this.hp <= price) {
-            sfx('ui');
-            this.toast('TOO WEAK');
-            return;
-          }
-          this.hp -= price;
-          this.hp = Math.min(this.maxHp, this.hp + price + 2);
-          sfx('pickup');
-          floatText(this, x, y - 12, 'HEAL', 0x7dffb3);
-          return;
-        }
-        if (this.gold < 4) {
+        if (this.gold < 6) {
           sfx('ui');
-          this.toast('NEED GOLD');
+          this.toast('NEED 6 GOLD');
           return;
         }
-        this.gold -= 4;
+        this.gold -= 6;
         this.hp = Math.min(this.maxHp, this.hp + 2);
         sfx('pickup');
         floatText(this, x, y - 12, '+2', 0x7dffb3);
       },
     });
-    if (alt > 0) {
-      this.interacts.push({
-        x: x + 28,
-        y,
-        r: 20,
-        text: `E GUN ${alt}`,
-        run: () => {
-          if (this.hp <= alt) {
-            sfx('ui');
-            this.toast('TOO WEAK');
-            return;
-          }
-          this.hp -= alt;
-          this.tryDrop(x, y - 18);
-          sfx('pickup');
-        },
-      });
-    }
+    this.interacts.push({
+      x: x + 28,
+      y,
+      r: 20,
+      text: 'E GUN 10G',
+      run: () => {
+        if (this.gold < 10) {
+          sfx('ui');
+          this.toast('NEED 10 GOLD');
+          return;
+        }
+        this.gold -= 10;
+        this.tryDrop(x, y - 18);
+        sfx('pickup');
+      },
+    });
+  }
+
+  /** Catalog prices are tuned for a bigger pool. Scale them onto the heart bar. */
+  private heartCost(raw: number | undefined, fallback: number): number {
+    const listed = raw ?? fallback;
+    const scaled = Math.max(1, Math.round((listed * this.maxHp) / 24));
+    return Math.min(scaled, Math.max(1, this.maxHp - 1));
+  }
+
+  private spawnHeartMerchant(x: number, y: number, payload: EventPayload | null): void {
+    const price = this.heartCost(payload?.hpPrice, 3);
+    const alt = this.heartCost(payload?.hpPriceAlt, (payload?.hpPrice ?? 3) + 2);
+    this.spawnKeeper(x, y);
+    this.interacts.push({
+      x,
+      y,
+      r: 24,
+      text: `E HEAL ${price}HP`,
+      run: () => {
+        if (this.hp <= price) {
+          sfx('ui');
+          this.toast('TOO WEAK');
+          return;
+        }
+        this.hp -= price;
+        this.hp = Math.min(this.maxHp, this.hp + price + 2);
+        sfx('pickup');
+        floatText(this, x, y - 12, 'HEAL', 0x7dffb3);
+      },
+    });
+    this.interacts.push({
+      x: x + 28,
+      y,
+      r: 20,
+      text: `E GUN ${alt}HP`,
+      run: () => {
+        if (this.hp <= alt) {
+          sfx('ui');
+          this.toast('TOO WEAK');
+          return;
+        }
+        this.hp -= alt;
+        damageNumber(this, x, y, alt, 0xff2e63);
+        this.tryDrop(x, y - 18);
+        sfx('pickup');
+      },
+    });
+  }
+
+  private spawnKeeper(x: number, y: number): void {
+    const key = this.textures.exists('shopkeep') ? 'shopkeep' : 'glow';
+    const sprite = this.add.sprite(x, y, key).setDepth(8);
+    if (this.anims.exists('shopkeep-idle')) sprite.play('shopkeep-idle');
+    this.props.push(sprite);
+  }
+
+  private curseFollows(): void {
+    const cursed = RELICS.filter((relic) => relic.rarity === 'cursed');
+    const pick = cursed[this.nonce % cursed.length] ?? relicById('blood-pact');
+    this.relics = [...this.relics, { ...pick, mods: { ...pick.mods } }];
+    this.active = pick;
+    this.activeCd = 0.4;
+    this.recompute();
+    this.toast(pick.name.toUpperCase());
   }
 
   private tryDrop(x: number, y: number): void {
@@ -782,8 +842,10 @@ export class RunScene extends Phaser.Scene {
       this.toast(drop.weapon.name.toUpperCase());
     } else {
       this.relics = [...this.relics, drop.relic];
+      this.active = drop.relic;
+      this.activeCd = 0.35;
       this.recompute();
-      this.toast(drop.relic.name.toUpperCase());
+      this.toast(`Q ${drop.relic.name.toUpperCase()}`);
     }
     sfx('pickup');
     burst(this, this.player.x, this.player.y, 0xc77dff, 8, 40);
@@ -974,7 +1036,8 @@ export class RunScene extends Phaser.Scene {
 
   private shoot(): void {
     if (!this.input.activePointer.leftButtonDown() || this.fireCd > 0) return;
-    this.fireCd = Math.max(0.05, this.gun.cooldownMs / 1000);
+    const haste = this.overdrive > 0 ? 0.45 : 1;
+    this.fireCd = Math.max(0.045, (this.gun.cooldownMs / 1000) * haste);
     const damage = this.gun.damage * this.fury;
     if (this.gun.beam) this.fireBeam(this.aim, damage);
     else {
@@ -1019,7 +1082,11 @@ export class RunScene extends Phaser.Scene {
     }
   }
 
-  private spawnBullet(angle: number, damage: number): void {
+  private spawnBullet(
+    angle: number,
+    damage: number,
+    opts?: { bounce?: number; pierce?: number; speed?: number },
+  ): void {
     const x = this.player.x + Math.cos(angle) * 12;
     const y = this.player.y + Math.sin(angle) * 12;
     const key = this.bulletKey();
@@ -1032,12 +1099,15 @@ export class RunScene extends Phaser.Scene {
     const body = bullet.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
     body.setSize(6, 6, true);
-    body.setBounce(this.gun.bounce > 0 ? 1 : 0);
-    bullet.setVelocity(Math.cos(angle) * this.gun.speed, Math.sin(angle) * this.gun.speed);
-    bullet.setData('life', this.gun.bounce > 0 ? 1.6 : 0.7);
+    const bounce = opts?.bounce ?? this.gun.bounce;
+    const pierce = opts?.pierce ?? this.gun.pierce;
+    const speed = opts?.speed ?? this.gun.speed;
+    body.setBounce(bounce > 0 ? 1 : 0);
+    bullet.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+    bullet.setData('life', bounce > 0 ? 1.6 : 0.7);
     bullet.setData('damage', damage);
-    bullet.setData('pierce', this.gun.pierce);
-    bullet.setData('bounces', this.gun.bounce);
+    bullet.setData('pierce', pierce);
+    bullet.setData('bounces', bounce);
     bullet.setData('hits', new Set<Phaser.GameObjects.GameObject>());
     bullet.setData('wallAt', 0);
   }
@@ -1211,17 +1281,101 @@ export class RunScene extends Phaser.Scene {
       .setVisible(true);
   }
 
-  private pulse(): void {
-    if (this.pulseCd > 0) {
+  private useActive(): void {
+    if (this.activeCd > 0 || this.dead) {
       sfx('ui');
       return;
     }
-    this.pulseCd = 4;
-    shockwave(this, this.player.x, this.player.y, 0x00f5d4);
-    sfx('explode');
-    triggerHitstop(26);
-    triggerShake(this.cameras.main, 0.005, 70);
-    this.blast(this.player.x, this.player.y, 48, 4 * this.fury);
+    const relic = this.active;
+    this.activeCd = Math.max(0.4, relic.activeMs / 1000);
+    const power = Math.max(
+      4,
+      (relic.mods.damageAdd ?? 0) + this.gun.damage * (relic.mods.damageMult ?? 1),
+    );
+    switch (relic.id) {
+      case 'hair-trigger':
+        this.overdrive = 2.4;
+        sfx('ui');
+        break;
+      case 'mercury-tread':
+        this.dashCd = 0;
+        this.dashing = 0;
+        this.startDash();
+        break;
+      case 'buckshot-band':
+      case 'wide-bore':
+        this.cone(4 + (relic.mods.pelletsAdd ?? 1), 0.35 + (relic.mods.spreadAdd ?? 0.1), power);
+        sfx('shoot');
+        break;
+      case 'rubber-seal':
+      case 'void-battery':
+        this.spawnBullet(this.aim, power, { bounce: 2 + (relic.mods.bounceAdd ?? 0), speed: 280 });
+        sfx('shoot');
+        break;
+      case 'ion-needle':
+      case 'rift-crown':
+        this.fireBeam(this.aim, power);
+        sfx('shoot');
+        break;
+      case 'forked-tongue':
+        this.spawnBullet(this.aim, power);
+        this.spawnBullet(this.aim + 0.35, power * 0.8);
+        this.spawnBullet(this.aim - 0.35, power * 0.8);
+        sfx('shoot');
+        break;
+      case 'leaden-soul':
+        this.spawnBullet(this.aim, power + (relic.mods.damageAdd ?? 0), {
+          pierce: 2 + (relic.mods.pierceAdd ?? 0),
+          speed: 180,
+        });
+        sfx('shoot');
+        break;
+      case 'storm-lattice':
+        this.blast(this.player.x, this.player.y, 90, power);
+        shockwave(this, this.player.x, this.player.y, 0x4cc9f0);
+        sfx('explode');
+        break;
+      case 'cursed-glass':
+        if (this.hp > 1) this.hp -= 1;
+        this.blast(this.player.x, this.player.y, 64, power);
+        shockwave(this, this.player.x, this.player.y, 0xff2e63);
+        sfx('hurt');
+        break;
+      case 'blood-pact':
+        if (this.hp <= 1) {
+          this.activeCd = 0;
+          sfx('ui');
+          this.toast('TOO WEAK');
+          return;
+        }
+        this.hp -= 1;
+        this.blast(this.player.x, this.player.y, 56, power * 1.4);
+        shockwave(this, this.player.x, this.player.y, 0xe63946);
+        sfx('hurt');
+        break;
+      case 'pyre-heart':
+        this.nova(10, power);
+        shockwave(this, this.player.x, this.player.y, 0xff6b35);
+        sfx('explode');
+        break;
+      default:
+        this.nova(8, Math.max(4, relic.mods.damageAdd ?? power * 0.6));
+        sfx('shoot');
+        break;
+    }
+    triggerHitstop(20);
+    this.toast(`Q ${relic.name.toUpperCase()}`);
+  }
+
+  private nova(count: number, damage: number): void {
+    for (let i = 0; i < count; i += 1) this.spawnBullet((Math.PI * 2 * i) / count, damage);
+  }
+
+  private cone(count: number, spread: number, damage: number): void {
+    for (let i = 0; i < count; i += 1) {
+      const t = count === 1 ? 0 : (i / (count - 1) - 0.5) * spread;
+      this.spawnBullet(this.aim + t, damage);
+    }
   }
 
   damagePlayer(amount: number, fromX: number, fromY: number): void {
@@ -1264,7 +1418,7 @@ export class RunScene extends Phaser.Scene {
   private goSummary(): void {
     if (this.left) return;
     this.left = true;
-    const shardsEarned = Math.max(1, this.floorNum + this.kills + this.gold);
+    const shardsEarned = Math.max(1, this.floorNum * 4 + this.kills * 2 + this.gold);
     addShards(shardsEarned);
     this.scene.start('summary', {
       floor: this.floorNum,
@@ -1279,8 +1433,7 @@ export class RunScene extends Phaser.Scene {
       hp: Math.max(0, Math.ceil(this.hp)),
       maxHp: this.maxHp,
       weaponName: this.gun.name.toUpperCase(),
-      ammoLabel:
-        this.relics.length > 0 ? `${this.relics.length} RELICS` : this.gun.rarity.toUpperCase(),
+      ammoLabel: `G${this.gold} Q ${this.active.name.toUpperCase()}`,
       dashReady: this.dashCd <= 0 && this.dashing <= 0,
       floor: this.floorNum,
       shards: loadSave().shards,
@@ -1386,4 +1539,8 @@ export class RunScene extends Phaser.Scene {
     const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / len));
     return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
   }
+}
+
+function relicById(id: string): Relic {
+  return RELICS.find((relic) => relic.id === id) ?? RELICS[0]!;
 }

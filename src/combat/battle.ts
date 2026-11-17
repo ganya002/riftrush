@@ -16,7 +16,14 @@ import {
 import { openingState } from './motion';
 import { makeRng } from './rng';
 import { ensureCombatTextures, TEX } from './textures';
-import { DataKey, type Actx, type CombatHooks, type FireOpts, type Foe, type FoeKind } from './types';
+import {
+  DataKey,
+  type Actx,
+  type CombatHooks,
+  type FireOpts,
+  type Foe,
+  type FoeKind,
+} from './types';
 
 const SLOT = 'riftrushEncounterShutdown';
 const BULLET_CAP = 260;
@@ -47,7 +54,8 @@ function assertHooks(hooks: CombatHooks): void {
   if (!hooks.player) throw new Error('startEncounter requires a player sprite');
   if (!hooks.enemyBullets?.create) throw new Error('startEncounter requires enemyBullets');
   if (typeof hooks.onCleared !== 'function') throw new Error('startEncounter requires onCleared');
-  if (typeof hooks.damagePlayer !== 'function') throw new Error('startEncounter requires damagePlayer');
+  if (typeof hooks.damagePlayer !== 'function')
+    throw new Error('startEncounter requires damagePlayer');
 }
 
 function readBounds(scene: Phaser.Scene): Bounds {
@@ -74,7 +82,8 @@ function arcade(sprite: Phaser.Physics.Arcade.Sprite): Phaser.Physics.Arcade.Bod
 
 function spriteOf(obj: unknown): Phaser.Physics.Arcade.Sprite | null {
   if (!obj || typeof obj !== 'object') return null;
-  if ('getData' in obj && typeof obj.getData === 'function') return obj as Phaser.Physics.Arcade.Sprite;
+  if ('getData' in obj && typeof obj.getData === 'function')
+    return obj as Phaser.Physics.Arcade.Sprite;
   if ('gameObject' in obj) return spriteOf(obj.gameObject);
   return null;
 }
@@ -149,12 +158,20 @@ class Encounter {
       if (hooks.roomKind === 'boss') this.spawnBoss();
       else this.spawnWave(hooks.roomKind === 'elite');
 
-      this.bodyOverlap = hooks.scene.physics.add.overlap(this.group, hooks.player, (left, right) => {
-        this.onBody(left, right);
-      });
-      this.bulletOverlap = hooks.scene.physics.add.overlap(hooks.enemyBullets, hooks.player, (left, right) => {
-        this.onBullet(left, right);
-      });
+      this.bodyOverlap = hooks.scene.physics.add.overlap(
+        this.group,
+        hooks.player,
+        (left, right) => {
+          this.onBody(left, right);
+        },
+      );
+      this.bulletOverlap = hooks.scene.physics.add.overlap(
+        hooks.enemyBullets,
+        hooks.player,
+        (left, right) => {
+          this.onBullet(left, right);
+        },
+      );
 
       hooks.scene.events.on(Phaser.Scenes.Events.UPDATE, this.onUpdate);
       hooks.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.onSceneEnd);
@@ -190,13 +207,15 @@ class Encounter {
       if (bullet.scene) bullet.destroy();
     }
     this.bullets.clear();
-    const live = [...this.hooks.enemyBullets.getChildren()];
-    for (const child of live) {
-      const sprite = child as Phaser.Physics.Arcade.Sprite;
-      if (!sprite.scene || !sprite.getData?.(DataKey.owned)) continue;
-      sprite.destroy();
+    const enemyBullets = this.hooks.enemyBullets;
+    if (enemyBullets?.children) {
+      for (const child of [...enemyBullets.getChildren()]) {
+        const sprite = child as Phaser.Physics.Arcade.Sprite;
+        if (!sprite.scene || !sprite.getData?.(DataKey.owned)) continue;
+        sprite.destroy();
+      }
     }
-    if (this.group.scene) this.group.destroy(false);
+    if (this.group?.scene && this.group.children) this.group.destroy(false);
     for (const key of this.painted) {
       if (scene.textures.exists(key)) scene.textures.remove(key);
     }
@@ -312,7 +331,12 @@ class Encounter {
     const player = this.hooks.player;
     if (Math.hypot(x - player.x, y - player.y) < 96) {
       const angle = Math.atan2(y - player.y, x - player.x);
-      const pushed = clampIn(this.bounds, player.x + Math.cos(angle) * 120, player.y + Math.sin(angle) * 120, 28);
+      const pushed = clampIn(
+        this.bounds,
+        player.x + Math.cos(angle) * 120,
+        player.y + Math.sin(angle) * 120,
+        28,
+      );
       x = pushed.x;
       y = pushed.y;
     }
@@ -330,7 +354,12 @@ class Encounter {
     const gfx = this.hooks.scene.add.graphics().setDepth(11);
     const generated = this.painted.has(key);
     const baseScale = (generated ? 2 : 1) * (opts.scaleMul ?? 1);
-    const maxHp = opts.hp ?? vitality(HP_BASE[opts.kind === 'boss-a' ? 'bossA' : opts.kind === 'boss-b' ? 'bossB' : opts.kind], this.hooks.floor);
+    const maxHp =
+      opts.hp ??
+      vitality(
+        HP_BASE[opts.kind === 'boss-a' ? 'bossA' : opts.kind === 'boss-b' ? 'bossB' : opts.kind],
+        this.hooks.floor,
+      );
     const next = openingState(opts.kind);
     const intro = Boolean(opts.elite) || Boolean(opts.boss);
     const foe: Foe = {
@@ -401,7 +430,13 @@ class Encounter {
       if (Math.hypot(mirrored.x - opts.x, mirrored.y - opts.y) < 24) {
         mirrored = clampIn(this.bounds, opts.x + 48, opts.y + 36, 16);
       }
-      const puppet = this.spawnFoe({ ...opts, x: mirrored.x, y: mirrored.y, mirror: false, elite: 'mirrored' });
+      const puppet = this.spawnFoe({
+        ...opts,
+        x: mirrored.x,
+        y: mirrored.y,
+        mirror: false,
+        elite: 'mirrored',
+      });
       foe.elite = 'mirrored';
       foe.puppet = puppet;
       puppet.master = foe;
@@ -503,7 +538,11 @@ class Encounter {
 
   private armExplosion(x: number, y: number): void {
     this.pending += 1;
-    const ring = this.hooks.scene.add.image(x, y, TEX.ring).setDepth(12).setTint(PALETTE.gold).setScale(0.45);
+    const ring = this.hooks.scene.add
+      .image(x, y, TEX.ring)
+      .setDepth(12)
+      .setTint(PALETTE.gold)
+      .setScale(0.45);
     this.owned.push(ring);
     this.hooks.scene.tweens.add({ targets: ring, scale: 1.7, alpha: 0.15, duration: 260 });
     const timer = this.hooks.scene.time.delayedCall(260, () => {
@@ -557,12 +596,24 @@ class Encounter {
     foe.regenAcc = 0;
     foe.hp += 1;
     this.sync(foe);
-    burst(this.hooks.scene, this.owned, foe.sprite.x, foe.sprite.y - 8, [PALETTE.mint, PALETTE.white], 3);
+    burst(
+      this.hooks.scene,
+      this.owned,
+      foe.sprite.x,
+      foe.sprite.y - 8,
+      [PALETTE.mint, PALETTE.white],
+      3,
+    );
   }
 
   private separate(): void {
     const live = this.foes.filter(
-      (foe) => foe.alive && !foe.master && foe.stagger <= 0 && foe.state !== 'dash' && foe.kind !== 'turret',
+      (foe) =>
+        foe.alive &&
+        !foe.master &&
+        foe.stagger <= 0 &&
+        foe.state !== 'dash' &&
+        foe.kind !== 'turret',
     );
     const min = 26;
     for (let i = 0; i < live.length; i++) {
@@ -671,7 +722,11 @@ class Encounter {
     body.setImmovable(true);
     body.setVelocity(Math.cos(opts.angle) * opts.speed, Math.sin(opts.angle) * opts.speed);
     const radius = 3;
-    body.setCircle(radius, Math.max(0, bullet.width / 2 - radius), Math.max(0, bullet.height / 2 - radius));
+    body.setCircle(
+      radius,
+      Math.max(0, bullet.width / 2 - radius),
+      Math.max(0, bullet.height / 2 - radius),
+    );
     this.bullets.add(bullet);
   }
 

@@ -117,9 +117,18 @@ function paintHud(
   const heartSpan = heartRowWidth(maxHp, scale);
   text.floor.setText(fitText(fitFloor(state.floor)));
   const leftWidth = Math.max(heartSpan, 7 * scale) + 6 * scale + text.floor.width;
-  drawPlate(plate, pad - 4 * scale, pad - 4 * scale, leftWidth + 8 * scale, Math.max(6 * scale, textHeight(scale)) + 8 * scale);
+  drawPlate(
+    plate,
+    pad - 4 * scale,
+    pad - 4 * scale,
+    leftWidth + 8 * scale,
+    Math.max(6 * scale, textHeight(scale)) + 8 * scale,
+  );
   drawHealth(plate, pad, pad, hp, maxHp, scale);
-  text.floor.setPosition(pad + heartSpan + 6 * scale, pad + Math.max(0, Math.round((6 * scale - textHeight(scale)) / 2)));
+  text.floor.setPosition(
+    pad + heartSpan + 6 * scale,
+    pad + Math.max(0, Math.round((6 * scale - textHeight(scale)) / 2)),
+  );
 
   const weaponName = state.weaponName.trim() || 'NONE';
   text.weapon.setText(fitText(weaponName));
@@ -130,16 +139,32 @@ function paintHud(
   text.shards.setText(fitText(String(Math.max(0, Math.trunc(state.shards)))));
   text.shards.setTint(PALETTE.gold);
 
-  const rightWidth = Math.max(text.weapon.width, text.ammo.width, text.dash.width, text.shards.width + 8 * scale);
+  const rightWidth = Math.max(
+    text.weapon.width,
+    text.ammo.width,
+    text.dash.width,
+    text.shards.width + 8 * scale,
+  );
   const line = textHeight(scale);
   const step = line + 2 * scale;
   const blockH = step * 3 + line + 4 * scale;
   const blockX = width - pad - rightWidth;
-  drawPlate(plate, blockX - 6 * scale, pad - 4 * scale, rightWidth + 10 * scale, blockH + 4 * scale);
+  drawPlate(
+    plate,
+    blockX - 6 * scale,
+    pad - 4 * scale,
+    rightWidth + 10 * scale,
+    blockH + 4 * scale,
+  );
   const right = width - pad;
   text.shards.setPosition(right - text.shards.width, pad);
   plate.fillStyle(PALETTE.gold, 1);
-  drawMiniDiamond(plate, right - text.shards.width - 7 * scale, pad + Math.round(line / 2) - 2 * scale, scale);
+  drawMiniDiamond(
+    plate,
+    right - text.shards.width - 7 * scale,
+    pad + Math.round(line / 2) - 2 * scale,
+    scale,
+  );
   text.weapon.setPosition(right - text.weapon.width, pad + step);
   text.ammo.setPosition(right - text.ammo.width, pad + step * 2);
   text.dash.setPosition(right - text.dash.width, pad + step * 3);
@@ -167,7 +192,12 @@ function drawHealth(
   if (maxHp <= 24) {
     for (let index = 0; index < maxHp; index += 1) {
       graphics.fillStyle(index < hp ? PALETTE.rift : PALETTE.common, 1);
-      graphics.fillRect(x + (index % 12) * 4 * scale, y + Math.floor(index / 12) * 4 * scale, 3 * scale, 3 * scale);
+      graphics.fillRect(
+        x + (index % 12) * 4 * scale,
+        y + Math.floor(index / 12) * 4 * scale,
+        3 * scale,
+        3 * scale,
+      );
     }
     return;
   }
@@ -249,7 +279,13 @@ function paintMap(
   }
 }
 
-function drawPlate(graphics: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number): void {
+function drawPlate(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
   graphics.fillStyle(PALETTE.void, 0.82);
   graphics.fillRect(x, y, w, h);
   graphics.fillStyle(PALETTE.violet, 1);
@@ -257,7 +293,12 @@ function drawPlate(graphics: Phaser.GameObjects.Graphics, x: number, y: number, 
   graphics.fillRect(x, y, 1, h);
 }
 
-function drawMiniDiamond(graphics: Phaser.GameObjects.Graphics, x: number, y: number, scale: number): void {
+function drawMiniDiamond(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  scale: number,
+): void {
   const s = Math.max(1, scale);
   graphics.fillRect(x + s, y, s, s);
   graphics.fillRect(x, y + s, 3 * s, s);
@@ -272,7 +313,10 @@ function heartRowWidth(maxHp: number, scale: number): number {
 }
 
 function weaponTint(name: string): number {
-  const found = WEAPONS.find((weapon) => weapon.id === name.toLowerCase() || weapon.name.toLowerCase() === name.toLowerCase());
+  const found = WEAPONS.find(
+    (weapon) =>
+      weapon.id === name.toLowerCase() || weapon.name.toLowerCase() === name.toLowerCase(),
+  );
   return found ? RARITY_COLOR[found.rarity] : PALETTE.bone;
 }
 

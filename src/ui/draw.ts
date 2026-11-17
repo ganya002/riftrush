@@ -200,6 +200,10 @@ export function button(
   );
 }
 
-export function placeCentered(text: Phaser.GameObjects.BitmapText, centerX: number, y: number): void {
+export function placeCentered(
+  text: Phaser.GameObjects.BitmapText,
+  centerX: number,
+  y: number,
+): void {
   centerText(text, centerX, y);
 }

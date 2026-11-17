@@ -185,14 +185,22 @@ const PERKS_MUTABLE: readonly PerkDef[] = [
   },
 ];
 
-export const CHARACTERS: readonly CharacterDef[] = Object.freeze(CHARACTERS_MUTABLE.map((entry) => Object.freeze(entry)));
-export const WEAPONS: readonly WeaponDef[] = Object.freeze(WEAPONS_MUTABLE.map((entry) => Object.freeze(entry)));
-export const PERKS: readonly PerkDef[] = Object.freeze(PERKS_MUTABLE.map((entry) => Object.freeze(entry)));
+export const CHARACTERS: readonly CharacterDef[] = Object.freeze(
+  CHARACTERS_MUTABLE.map((entry) => Object.freeze(entry)),
+);
+export const WEAPONS: readonly WeaponDef[] = Object.freeze(
+  WEAPONS_MUTABLE.map((entry) => Object.freeze(entry)),
+);
+export const PERKS: readonly PerkDef[] = Object.freeze(
+  PERKS_MUTABLE.map((entry) => Object.freeze(entry)),
+);
 
 export function defaultSave(): SaveData {
   return {
     shards: 0,
-    unlockedCharacterIds: CHARACTERS.filter((character) => character.startsUnlocked).map((character) => character.id),
+    unlockedCharacterIds: CHARACTERS.filter((character) => character.startsUnlocked).map(
+      (character) => character.id,
+    ),
     unlockedWeaponIds: WEAPONS.filter((weapon) => weapon.free).map((weapon) => weapon.id),
     perks: { maxHp: 0, damage: 0, dash: 0 },
   };
@@ -319,7 +327,10 @@ function sanitize(value: unknown): SaveData {
   const fresh = defaultSave();
   const source = isRecord(value) ? value : {};
   const perks = isRecord(source.perks) ? source.perks : {};
-  const unlockedCharacters = unionIds(idList(source.unlockedCharacterIds), fresh.unlockedCharacterIds);
+  const unlockedCharacters = unionIds(
+    idList(source.unlockedCharacterIds),
+    fresh.unlockedCharacterIds,
+  );
   const unlockedWeapons = unionIds(idList(source.unlockedWeaponIds), fresh.unlockedWeaponIds);
   return {
     shards: nonNegative(source.shards),
@@ -359,7 +370,8 @@ function rank(id: PerkId, value: unknown): number {
 }
 
 function nonNegative(value: unknown): number {
-  const numeric = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  const numeric =
+    typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
   if (!Number.isFinite(numeric)) return 0;
   return Math.max(0, Math.trunc(numeric));
 }

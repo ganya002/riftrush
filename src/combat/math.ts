@@ -25,7 +25,12 @@ export function inFront(facing: number, fromAngle: number, half = SHIELD_HALF): 
   return Math.abs(wrap(fromAngle - facing)) <= half;
 }
 
-export function clampIn(bounds: Bounds, x: number, y: number, pad: number): { x: number; y: number } {
+export function clampIn(
+  bounds: Bounds,
+  x: number,
+  y: number,
+  pad: number,
+): { x: number; y: number } {
   return {
     x: clamp(x, bounds.x + pad, bounds.right - pad),
     y: clamp(y, bounds.y + pad, bounds.bottom - pad),

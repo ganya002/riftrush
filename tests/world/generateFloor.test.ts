@@ -216,9 +216,7 @@ describe('generateFloor', () => {
         if (layout.modifier === null) nullModifiers += 1;
         else modified += 1;
         if (floor === 3) {
-          shapes.add(
-            JSON.stringify(layout.rooms.map((room) => [room.gridX, room.gridY])),
-          );
+          shapes.add(JSON.stringify(layout.rooms.map((room) => [room.gridX, room.gridY])));
         }
       }
     }

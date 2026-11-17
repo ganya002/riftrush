@@ -1,7 +1,14 @@
 import { RELICS } from './relics';
 import { rollBandFactor, rollRarity } from './rarity';
 import { clamp01, roundTo } from './round';
-import { WEAPON_IDS, type Drop, type Rarity, type Relic, type RelicMods, type Weapon } from './types';
+import {
+  WEAPON_IDS,
+  type Drop,
+  type Rarity,
+  type Relic,
+  type RelicMods,
+  type Weapon,
+} from './types';
 import { WEAPONS } from './weapons';
 
 /** Share of combat rolls that return null. Most calls still drop something. */
@@ -100,7 +107,8 @@ function scaleMods(mods: RelicMods, factor: number, second: number): RelicMods {
     scaled.bounceAdd = Math.max(1, Math.round(scaled.bounceAdd * second));
   }
   if (scaled.spreadAdd !== undefined) scaled.spreadAdd = roundTo(scaled.spreadAdd * second, 3);
-  if (scaled.cooldownMult !== undefined) scaled.cooldownMult = scaleMult(scaled.cooldownMult, second);
+  if (scaled.cooldownMult !== undefined)
+    scaled.cooldownMult = scaleMult(scaled.cooldownMult, second);
   if (scaled.speedMult !== undefined) scaled.speedMult = scaleMult(scaled.speedMult, second);
   return scaled;
 }

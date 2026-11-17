@@ -1,13 +1,6 @@
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'cursed';
 
-export type WeaponId =
-  | 'pistol'
-  | 'shotgun'
-  | 'smg'
-  | 'laser'
-  | 'orb'
-  | 'rail'
-  | 'splitter';
+export type WeaponId = 'pistol' | 'shotgun' | 'smg' | 'laser' | 'orb' | 'rail' | 'splitter';
 
 export type Element = 'phys' | 'fire' | 'shock';
 
@@ -86,6 +79,8 @@ export interface Relic {
   name: string;
   rarity: Rarity;
   blurb: string;
+  /** Milliseconds before Q can fire this relic's signature again. */
+  activeMs: number;
   mods: RelicMods;
   /** Multiplier rolled inside the rarity band. Catalog entries use 1. */
   statRoll: number;

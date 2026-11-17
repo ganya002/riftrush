@@ -5,6 +5,13 @@ export { SummaryScene } from './summary-scene';
 export type { SummaryData } from './summary-scene';
 export { mountHud } from './hud';
 export type { HudRoom, HudState } from './hud';
-export { defaultSettings, loadSettings, mountPause, normalizeSettings, SETTINGS_KEY, writeSettings } from './pause';
+export {
+  defaultSettings,
+  loadSettings,
+  mountPause,
+  normalizeSettings,
+  SETTINGS_KEY,
+  writeSettings,
+} from './pause';
 export type { GameSettings, PauseOptions } from './pause';
 export { PALETTE, RARITY_COLOR } from './theme';

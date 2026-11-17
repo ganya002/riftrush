@@ -453,7 +453,14 @@ function bulletOrb(): Frame[] {
   return radii.map((radius, i) => {
     const frame = empty(16, 16);
     fillEllipse(frame, 7.5, 7.5, radius, radius, 14);
-    fillEllipse(frame, 7.5, 7.5, Math.max(1, radius - 1.6), Math.max(1, radius - 1.6), i % 2 ? 16 : 15);
+    fillEllipse(
+      frame,
+      7.5,
+      7.5,
+      Math.max(1, radius - 1.6),
+      Math.max(1, radius - 1.6),
+      i % 2 ? 16 : 15,
+    );
     plot(frame, 6, 6, 17);
     plot(frame, 8, 8, 7);
     return frame;
@@ -525,7 +532,15 @@ function monarch(): Frame[] {
   });
 }
 
-function gauntlet(frame: Frame, x: number, y: number, w: number, h: number, main: number, trim: number): void {
+function gauntlet(
+  frame: Frame,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  main: number,
+  trim: number,
+): void {
   fillRect(frame, x, y, w, h, main);
   fillRect(frame, x + 1, y + h - 3, w - 2, 2, 27);
   for (let finger = 0; finger < 3; finger++) {
@@ -598,7 +613,15 @@ function colossus(): Frame[] {
   });
 }
 
-function shiftRegionSafe(src: Frame, x0: number, y0: number, x1: number, y1: number, dx: number, dy: number): Frame {
+function shiftRegionSafe(
+  src: Frame,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  dx: number,
+  dy: number,
+): Frame {
   const out = clone(src);
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
@@ -772,7 +795,9 @@ function crystalFrames(): Frame[] {
     { 11: 12, 15: 14, 7: 7, 17: 11 },
     { 11: 17, 15: 15, 7: 17, 17: 17 },
   ];
-  return maps.map((map) => recolorWhere(CRYSTAL, (color) => map[color as keyof typeof map] ?? color));
+  return maps.map((map) =>
+    recolorWhere(CRYSTAL, (color) => map[color as keyof typeof map] ?? color),
+  );
 }
 
 function glowCluster(hot: number, mid: number, edge: number): { frame: Frame; alpha: Uint8Array } {

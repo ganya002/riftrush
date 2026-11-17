@@ -16,7 +16,7 @@ export {
   rollRoomEvent,
 } from '../events';
 export type { EventId, EventPayload, FloorModifier, RoomEvent } from '../events';
-export { applySynergies, rollDrop, startingWeapon } from '../loot';
+export { RELICS, applySynergies, rollDrop, startingWeapon } from '../loot';
 export type { Drop, Relic, Weapon, WeaponId } from '../loot';
 export { CHARACTERS, SAVE_KEY, addShards, getCharacter, getPerk, loadSave } from '../meta';
 export type { CharacterDef, SaveData } from '../meta';

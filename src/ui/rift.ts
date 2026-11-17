@@ -10,7 +10,14 @@ interface Shard {
   phase: number;
 }
 
-const SHARD_COLORS = [PALETTE.gold, PALETTE.violet, PALETTE.mint, PALETTE.rift, PALETTE.bone, PALETTE.life];
+const SHARD_COLORS = [
+  PALETTE.gold,
+  PALETTE.violet,
+  PALETTE.mint,
+  PALETTE.rift,
+  PALETTE.bone,
+  PALETTE.life,
+];
 
 /** Animated rift behind menus. Returns a draw function for the scene update loop. */
 export function createRift(scene: Phaser.Scene, veilAlpha: number): (time: number) => void {

@@ -102,7 +102,10 @@ export function mountPause(scene: Phaser.Scene, opts: PauseOptions): Phaser.Game
 
     const label = pxText(scene, panelX + 16 * S, panelY + 48 * S, 'VOLUME', small, PALETTE.common);
     percent = pxText(scene, 0, panelY + 48 * S, '100%', small, PALETTE.bone);
-    const barW = Math.max(40 * S, panelW - 32 * S - textWidth('VOLUME', small) - textWidth('100%', small) - 12 * S);
+    const barW = Math.max(
+      40 * S,
+      panelW - 32 * S - textWidth('VOLUME', small) - textWidth('100%', small) - 12 * S,
+    );
     const barX = panelX + 16 * S + textWidth('VOLUME', small) + 6 * S;
     const barY = panelY + 50 * S;
     const barH = 6 * S;
@@ -122,16 +125,44 @@ export function mountPause(scene: Phaser.Scene, opts: PauseOptions): Phaser.Game
 
     const rowW = panelW - 32 * S;
     const rowX = panelX + 16 * S;
-    button(scene, root, rowX, panelY + 70 * S, rowW, 22 * S, `SCREENSHAKE ${current.screenshake ? 'ON' : 'OFF'}`, body, () => {
-      commit({ ...current, screenshake: !current.screenshake }, true);
-    }, { accent: current.screenshake ? PALETTE.mint : PALETTE.common });
-    button(scene, root, rowX, panelY + 98 * S, rowW, 22 * S, `MUTED ${current.muted ? 'ON' : 'OFF'}`, body, () => {
-      commit({ ...current, muted: !current.muted }, true);
-    }, { accent: current.muted ? PALETTE.rift : PALETTE.mint });
-    button(scene, root, rowX, panelY + 132 * S, rowW, 24 * S, 'RESUME', body, () => close(), { accent: PALETTE.gold, text: PALETTE.gold });
+    button(
+      scene,
+      root,
+      rowX,
+      panelY + 70 * S,
+      rowW,
+      22 * S,
+      `SCREENSHAKE ${current.screenshake ? 'ON' : 'OFF'}`,
+      body,
+      () => {
+        commit({ ...current, screenshake: !current.screenshake }, true);
+      },
+      { accent: current.screenshake ? PALETTE.mint : PALETTE.common },
+    );
+    button(
+      scene,
+      root,
+      rowX,
+      panelY + 98 * S,
+      rowW,
+      22 * S,
+      `MUTED ${current.muted ? 'ON' : 'OFF'}`,
+      body,
+      () => {
+        commit({ ...current, muted: !current.muted }, true);
+      },
+      { accent: current.muted ? PALETTE.rift : PALETTE.mint },
+    );
+    button(scene, root, rowX, panelY + 132 * S, rowW, 24 * S, 'RESUME', body, () => close(), {
+      accent: PALETTE.gold,
+      text: PALETTE.gold,
+    });
 
     const hint = pxText(scene, 0, 0, 'ESC', small, PALETTE.common);
-    hint.setPosition(Math.round(panelX + (panelW - hint.width) / 2), panelY + panelH - textHeight(small) - 8 * S);
+    hint.setPosition(
+      Math.round(panelX + (panelW - hint.width) / 2),
+      panelY + panelH - textHeight(small) - 8 * S,
+    );
     root.add(hint);
     pin(root);
   };
