@@ -16,7 +16,7 @@ import {
   updateFeel,
 } from './feel';
 import { hudTop } from '../ui/hud';
-import { roomZoom } from './view';
+import { roomTiles, roomZoom } from './view';
 import {
   ActiveEffect,
   DataKey,
@@ -501,8 +501,8 @@ export class RunScene extends Phaser.Scene {
     const room = this.floor.rooms.find((entry) => entry.id === id) ?? this.floor.rooms[0];
     if (!room) return;
     this.wipeRoom();
-    this.room = room;
     this.roomFx = emptyFx();
+    this.room = this.fitRoom(room);
     this.origin = { x: room.gridX * GAP, y: room.gridY * GAP };
     const fight =
       (room.kind === 'combat' || room.kind === 'elite' || room.kind === 'boss') &&
@@ -513,7 +513,7 @@ export class RunScene extends Phaser.Scene {
     this.dressProps();
     this.frameRoom();
     this.cameras.main.startFollow(this.player, true, 0.22, 0.22);
-    this.cameras.main.setFollowOffset(32, -24);
+    this.cameras.main.setFollowOffset(0, 0);
     this.flash.setFillStyle(0xf4efe6, 1).setAlpha(0.72);
     const spawn = this.spawnPoint(arrival);
     this.player.setPosition(spawn.x, spawn.y);
@@ -561,18 +561,45 @@ export class RunScene extends Phaser.Scene {
     this.syncCameras();
   }
 
-  private frameRoom(): void {
+  private frameMetrics(): {
+    top: number;
+    viewW: number;
+    worldH: number;
+    zoom: number;
+    skirtC: number;
+    skirtR: number;
+  } {
     const roomW = this.room.width * TILE;
     const roomH = this.room.height * TILE;
     const viewW = Math.max(1, this.scale.width);
     const viewH = Math.max(1, this.scale.height);
     const top = hudTop(this);
-    const worldH = Math.max(1, viewH - top);
+    const worldH = Math.max(1, viewH - top - top);
+    const zoom = roomZoom(viewW, worldH, roomW, roomH);
+    const seeW = viewW / zoom;
+    const seeH = worldH / zoom;
+    return {
+      top,
+      viewW,
+      worldH,
+      zoom,
+      skirtC: Math.max(0, Math.ceil((seeW - roomW) / (2 * TILE))),
+      skirtR: Math.max(0, Math.ceil((seeH - roomH) / (2 * TILE))),
+    };
+  }
+
+  private frameRoom(): void {
+    const roomW = this.room.width * TILE;
+    const roomH = this.room.height * TILE;
+    const { top, viewW, worldH, zoom, skirtC, skirtR } = this.frameMetrics();
+    const viewH = Math.max(1, this.scale.height);
+    const padX = skirtC * TILE;
+    const padY = skirtR * TILE;
     const cam = this.cameras.main;
     cam.setViewport(0, top, viewW, worldH);
-    cam.setZoom(roomZoom(viewW, worldH, roomW, roomH));
+    cam.setZoom(zoom);
     cam.roundPixels = true;
-    cam.setBounds(this.origin.x, this.origin.y, roomW, roomH);
+    cam.setBounds(this.origin.x - padX, this.origin.y - padY, roomW + padX * 2, roomH + padY * 2);
     this.physics.world.setBounds(this.origin.x, this.origin.y, roomW, roomH);
     this.uiCam?.setViewport(0, 0, viewW, viewH);
     this.uiCam?.setScroll(0, 0);
@@ -614,8 +641,20 @@ export class RunScene extends Phaser.Scene {
 
   private onResize = (): void => {
     if (!this.room) return;
+    const fitted = this.fitRoom(this.room);
+    this.room.width = fitted.width;
+    this.room.height = fitted.height;
+    this.rebuildTiles(!this.sealed);
     this.frameRoom();
   };
+
+  private fitRoom(room: RoomDef): RoomDef {
+    const viewW = Math.max(1, this.scale.width);
+    const strip = hudTop(this);
+    const worldH = Math.max(1, this.scale.height - strip - strip);
+    const { cols, rows } = roomTiles(viewW, worldH, TILE);
+    return { ...room, width: cols, height: rows };
+  }
 
   private syncCameras(): void {
     const ui = this.uiCam;
@@ -707,12 +746,21 @@ export class RunScene extends Phaser.Scene {
     this.tiles?.destroy();
     this.walls.clear(true, true);
     this.destroyTriggers();
-    const grid = this.gridFor(open);
+    const inner = this.gridFor(open);
+    const { skirtC, skirtR } = this.frameMetrics();
+    const cols = (inner[0]?.length ?? 0) + skirtC * 2;
+    const rows = inner.length + skirtR * 2;
+    const grid = Array.from({ length: rows }, () => Array.from({ length: cols }, () => 1));
+    for (let r = 0; r < inner.length; r += 1) {
+      const source = inner[r] ?? [];
+      const dest = grid[r + skirtR];
+      for (let c = 0; c < source.length; c += 1) dest[c + skirtC] = source[c] ?? 1;
+    }
     this.tiles = blitRoom(this, this.floor.biome, TILE, grid);
-    this.tiles.setPosition(this.origin.x, this.origin.y);
+    this.tiles.setPosition(this.origin.x - skirtC * TILE, this.origin.y - skirtR * TILE);
     this.tiles.setDepth(0);
-    for (let r = 0; r < grid.length; r += 1) {
-      const row = grid[r] ?? [];
+    for (let r = 0; r < inner.length; r += 1) {
+      const row = inner[r] ?? [];
       for (let c = 0; c < row.length; c += 1) {
         if (!row[c]) continue;
         const block = this.add.zone(
@@ -1541,7 +1589,7 @@ export class RunScene extends Phaser.Scene {
       this.player.x + Math.cos(this.aim) * reach,
       this.player.y + Math.sin(this.aim) * reach,
     );
-    this.cameras.main.setFollowOffset(36, -28);
+    this.cameras.main.setFollowOffset(0, 0);
   }
 
   private dress(dt: number): void {

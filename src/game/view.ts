@@ -12,6 +12,15 @@ export interface FittedView {
 }
 
 /**
+ * Top HUD strip in buffer pixels. Matches `hudTop`: scale 1 is 32px, and the
+ * scale steps up with the 480×270 design size.
+ */
+export function hudStrip(width: number, height: number): number {
+  const scale = Math.max(1, Math.floor(Math.min(width / BASE_WIDTH, height / BASE_HEIGHT)));
+  return 32 * scale;
+}
+
+/**
  * Integer pixel scale that fills the browser.
  * The buffer grows past 480×270 when the window is wider or taller than that aspect,
  * so the canvas does not sit in a black letterbox.
@@ -28,14 +37,21 @@ export function fitView(windowWidth: number, windowHeight: number): FittedView {
 }
 
 /**
- * Integer camera zoom that makes the room cover the view.
- * The visible world is never larger than the room, so the floor reaches the screen edge.
+ * Integer camera zoom that keeps the whole room, wall ring included, inside the view.
  */
 export function roomZoom(viewW: number, viewH: number, roomW: number, roomH: number): number {
   const vw = Math.max(1, viewW);
   const vh = Math.max(1, viewH);
   const rw = Math.max(1, roomW);
   const rh = Math.max(1, roomH);
-  const cover = Math.max(vw / rw, vh / rh);
-  return Math.max(1, Math.ceil(cover - 1e-4));
+  const fit = Math.min(vw / rw, vh / rh);
+  return Math.max(1, Math.floor(fit + 1e-4));
+}
+
+/** Tile counts that cover the view, so the wall ring lands on the screen edge. */
+export function roomTiles(viewW: number, viewH: number, tile = 16): { cols: number; rows: number } {
+  return {
+    cols: Math.max(13, Math.ceil(Math.max(1, viewW) / tile)),
+    rows: Math.max(13, Math.ceil(Math.max(1, viewH) / tile)),
+  };
 }
